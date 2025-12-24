@@ -231,41 +231,36 @@ const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
       .replace('{score}', result.totalScore)
       .replace('{rank}', result.rank);
 
-    try {
-      // Try Web Share API first
-      if (navigator.share && navigator.canShare) {
-        const shareData = {
-          title: 'Greenshoe Sprint - IB.GAMES',
-          text: caption,
-          url: window.location.href
-        };
-        
-        if (navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          setShareStatus('shared');
-          setIsGeneratingImage(false);
-          return;
-        }
-      }
-    } catch (err) {
-      console.log('Web Share failed, using fallback');
-    }
-
-    // Fallback: Copy caption and open LinkedIn
+    // Copy caption to clipboard first
     try {
       await navigator.clipboard.writeText(caption);
       setShareStatus('copied');
-      
-      // Open LinkedIn share
-      const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin + '/play/greenshoe')}`;
-      window.open(linkedInUrl, '_blank', 'width=600,height=600');
-      
-      if (onShare) onShare({ caption, method: 'linkedin' });
     } catch (err) {
-      console.error('Share failed:', err);
-      setShareStatus('error');
+      console.log('Clipboard failed');
     }
+
+    // Try Web Share API (works on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Greenshoe Sprint - IB.GAMES',
+          text: caption,
+          url: window.location.origin + '/play/greenshoe'
+        });
+        setIsGeneratingImage(false);
+        return;
+      } catch (err) {
+        // User cancelled or not supported, fall through to LinkedIn
+        console.log('Web Share cancelled/failed, opening LinkedIn');
+      }
+    }
+
+    // Open LinkedIn share page
+    const shareUrl = window.location.origin + '/play/greenshoe';
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+    window.open(linkedInUrl, '_blank', 'width=600,height=600,scrollbars=yes');
     
+    if (onShare) onShare({ caption, method: 'linkedin' });
     setIsGeneratingImage(false);
   };
 
