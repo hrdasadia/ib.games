@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { 
   Trophy, RefreshCw, Share2, ChevronRight, BookOpen, Star, 
   TrendingUp, TrendingDown, Target, Shield, Zap, AlertTriangle,
-  CheckCircle, XCircle, Clock, DollarSign
+  CheckCircle, Lightbulb, DollarSign, Clock
 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { SCORING_CONFIG, LEARNING_BULLETS, LINKEDIN_CAPTION_TEMPLATE } from '../../data/mockData';
-import html2canvas from 'html2canvas';
+import { LEARNING_BULLETS, LINKEDIN_CAPTION_TEMPLATE } from '../../data/mockData';
 
 // Rank explanations
 const RANK_INFO = {
@@ -17,13 +16,13 @@ const RANK_INFO = {
   'Analyst': { abbrev: 'AN', description: 'Entry level. Keep practicing!', color: 'from-gray-400 to-slate-500' }
 };
 
-const ScoreCard = ({ result, forExport = false }) => {
+const ScoreCard = ({ result }) => {
   const rankInfo = RANK_INFO[result.rank];
 
   return (
     <div 
       id="score-card"
-      className={`bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-6 border border-white/10 ${forExport ? 'w-[400px]' : 'w-full'}`}
+      className="bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-6 border border-white/10 w-full"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -94,126 +93,186 @@ const ScoreCard = ({ result, forExport = false }) => {
 };
 
 const PerformanceBreakdown = ({ result }) => {
-  // Analyze performance
-  const priceDeviation = Math.abs(result.finalPrice - 100);
-  const wasStable = priceDeviation < 5;
-  const usedAllGreenshoes = result.greenshoesUsed === 3;
-  const conservedBudget = result.budgetRemaining > 50;
-  const hadHighVolatility = result.maxVolatility > 0.15;
-
   const insights = [];
+  const improvements = [];
 
-  // Price stability insight
-  if (wasStable) {
+  // Calculate performance thresholds based on actual scores
+  const stabilityPercent = (result.scores.stability / 400) * 100;
+  const efficiencyPercent = (result.scores.efficiency / 200) * 100;
+  const reputationPercent = (result.scores.reputation / 200) * 100;
+  const liquidityPercent = (result.scores.liquidity / 200) * 100;
+
+  const priceDeviation = Math.abs(result.finalPrice - 100);
+
+  // === PRICE STABILITY ANALYSIS ===
+  if (stabilityPercent >= 70) {
     insights.push({
       type: 'success',
-      title: 'Price Stability',
-      message: `Final price $${result.finalPrice.toFixed(2)} — very close to target $100!`,
+      title: 'Strong Price Stability',
+      message: `Final price $${result.finalPrice.toFixed(2)} — you kept it close to the $100 target.`,
       icon: CheckCircle
     });
-  } else if (result.finalPrice > 105) {
+  } else if (result.finalPrice > 108) {
     insights.push({
       type: 'warning',
-      title: 'Price Too High',
-      message: `Final price $${result.finalPrice.toFixed(2)} — could have used more greenshoes to cool demand.`,
+      title: 'Price Ran Too High',
+      message: `Final price $${result.finalPrice.toFixed(2)} — demand overheated beyond the target.`,
       icon: TrendingUp
     });
-  } else {
+    improvements.push('Use greenshoes earlier when you see price climbing above $105 to release more shares and cool demand.');
+  } else if (result.finalPrice < 95) {
     insights.push({
       type: 'warning',
-      title: 'Price Too Low',
-      message: `Final price $${result.finalPrice.toFixed(2)} — needed more stabilization support.`,
+      title: 'Price Dropped Too Low',
+      message: `Final price $${result.finalPrice.toFixed(2)} — insufficient support during selloffs.`,
       icon: TrendingDown
     });
-  }
-
-  // Greenshoe usage insight
-  if (result.greenshoesUsed === 0) {
-    insights.push({
-      type: 'info',
-      title: 'Greenshoe Unused',
-      message: 'You didn\'t use any greenshoes. They help cool overheating demand — try tapping when price spikes!',
-      icon: AlertTriangle
-    });
-  } else if (result.greenshoesUsed <= 2 && result.finalPrice > 105) {
-    insights.push({
-      type: 'warning',
-      title: 'Could Use More Greenshoes',
-      message: `Used ${result.greenshoesUsed}/3 greenshoes. With high final price, using more could have helped.`,
-      icon: Zap
-    });
+    improvements.push('Hold longer during price dips to provide buy support. Watch for the price turning red as your cue.');
   } else {
     insights.push({
-      type: 'success',
-      title: 'Good Greenshoe Timing',
-      message: `Used ${result.greenshoesUsed}/3 greenshoes effectively to manage supply.`,
-      icon: CheckCircle
+      type: 'info',
+      title: 'Price Stability',
+      message: `Final price $${result.finalPrice.toFixed(2)} — moderate deviation from target.`,
+      icon: Target
     });
+    improvements.push('Try to keep price within $98-$102 for best stability scores.');
   }
 
-  // Budget usage insight
-  if (conservedBudget && result.finalPrice < 98) {
+  // === GREENSHOE ANALYSIS (Based on efficiency score) ===
+  if (result.greenshoesUsed === 0) {
     insights.push({
       type: 'warning',
-      title: 'Underused Budget',
-      message: `${result.budgetRemaining.toFixed(0)}% budget remaining. Hold longer during price drops to provide more support!`,
+      title: 'Greenshoes Not Used',
+      message: 'You didn\'t tap to use any greenshoe options during the run.',
+      icon: AlertTriangle
+    });
+    improvements.push('TAP when price spikes above $105 to release extra shares. This cools overheating demand.');
+  } else if (efficiencyPercent >= 60) {
+    insights.push({
+      type: 'success',
+      title: 'Well-Timed Greenshoes',
+      message: `Used ${result.greenshoesUsed}/3 greenshoes at good moments to manage supply.`,
+      icon: CheckCircle
+    });
+  } else if (efficiencyPercent >= 30) {
+    insights.push({
+      type: 'info',
+      title: 'Greenshoe Timing Could Improve',
+      message: `Used ${result.greenshoesUsed}/3 greenshoes, but timing wasn't optimal.`,
+      icon: Clock
+    });
+    improvements.push('Greenshoes work best when price is spiking above $105. Using them when price is stable or low wastes their effect.');
+  } else {
+    insights.push({
+      type: 'warning',
+      title: 'Poor Greenshoe Timing',
+      message: `Used ${result.greenshoesUsed}/3 greenshoes at suboptimal times — low efficiency score.`,
+      icon: AlertTriangle
+    });
+    improvements.push('Don\'t panic-tap greenshoes. Wait for clear demand surges (price >$105) before releasing extra shares.');
+  }
+
+  // === BUDGET USAGE ANALYSIS ===
+  const budgetUsed = 100 - result.budgetRemaining;
+  if (budgetUsed < 20 && result.finalPrice < 98) {
+    insights.push({
+      type: 'warning',
+      title: 'Stabilization Underused',
+      message: `Only used ${budgetUsed.toFixed(0)}% of budget while price was falling.`,
       icon: DollarSign
     });
-  } else if (result.budgetRemaining < 20) {
+    improvements.push('HOLD the screen longer when price drops below $98. Your buy support pushes the price back up.');
+  } else if (budgetUsed > 80 && result.budgetRemaining < 20) {
     insights.push({
       type: 'info',
       title: 'Heavy Stabilization',
-      message: `Used most of your budget (${(100 - result.budgetRemaining).toFixed(0)}%). You were active in supporting the price.`,
+      message: `Used ${budgetUsed.toFixed(0)}% of your budget — you were very active.`,
       icon: Shield
     });
-  } else {
+    if (stabilityPercent < 50) {
+      improvements.push('You spent a lot on stabilization but price still drifted. Try combining holds with greenshoes for better effect.');
+    }
+  } else if (result.budgetRemaining > 40 && stabilityPercent >= 60) {
     insights.push({
       type: 'success',
       title: 'Efficient Budget Use',
-      message: `${result.budgetRemaining.toFixed(0)}% budget remaining — good balance of intervention and restraint.`,
+      message: `${result.budgetRemaining.toFixed(0)}% budget remaining — balanced intervention.`,
       icon: CheckCircle
     });
   }
 
-  // Volatility insight
-  if (hadHighVolatility) {
+  // === VOLATILITY ANALYSIS ===
+  if (result.maxVolatility > 0.15) {
     insights.push({
       type: 'warning',
-      title: 'High Volatility',
-      message: 'Market got choppy. React faster to demand surges with greenshoes, and hold during dips.',
+      title: 'High Volatility Periods',
+      message: 'Market got very choppy during your run, hurting reputation.',
       icon: AlertTriangle
+    });
+    improvements.push('React faster to demand surges. When volatility spikes (indicator turns red), immediately stabilize or use greenshoe.');
+  } else if (reputationPercent >= 70) {
+    insights.push({
+      type: 'success',
+      title: 'Smooth Trading',
+      message: 'You kept volatility under control — good for reputation.',
+      icon: CheckCircle
     });
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-white font-semibold flex items-center gap-2">
-        <BookOpen className="w-5 h-5 text-cyan-400" />
-        What Happened
-      </h3>
-      
-      {insights.map((insight, i) => (
-        <div 
-          key={i}
-          className={`p-4 rounded-xl border ${
-            insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' :
-            insight.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' :
-            'bg-white/5 border-white/10'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <insight.icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              insight.type === 'success' ? 'text-emerald-400' :
-              insight.type === 'warning' ? 'text-amber-400' :
-              'text-white/50'
-            }`} />
-            <div>
-              <div className="text-white font-medium text-sm">{insight.title}</div>
-              <div className="text-white/60 text-sm mt-0.5">{insight.message}</div>
+    <div className="space-y-4">
+      {/* What Happened */}
+      <div className="space-y-3">
+        <h3 className="text-white font-semibold flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-cyan-400" />
+          What Happened
+        </h3>
+        
+        {insights.map((insight, i) => (
+          <div 
+            key={i}
+            className={`p-4 rounded-xl border ${
+              insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' :
+              insight.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' :
+              'bg-white/5 border-white/10'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <insight.icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                insight.type === 'success' ? 'text-emerald-400' :
+                insight.type === 'warning' ? 'text-amber-400' :
+                'text-cyan-400'
+              }`} />
+              <div>
+                <div className="text-white font-medium text-sm">{insight.title}</div>
+                <div className="text-white/60 text-sm mt-0.5">{insight.message}</div>
+              </div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* How to Improve */}
+      {improvements.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-white font-semibold flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-400" />
+            How to Improve
+          </h3>
+          <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl p-4 border border-amber-500/20">
+            <ul className="space-y-3">
+              {improvements.map((tip, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-white/80">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 };
@@ -250,7 +309,6 @@ const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
         setIsGeneratingImage(false);
         return;
       } catch (err) {
-        // User cancelled or not supported, fall through to LinkedIn
         console.log('Web Share cancelled/failed, opening LinkedIn');
       }
     }
