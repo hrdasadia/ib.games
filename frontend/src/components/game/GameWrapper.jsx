@@ -1,14 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import LandingScreen from './LandingScreen';
-import TutorialOverlay from './TutorialOverlay';
+import AnimatedExplainer from './AnimatedExplainer';
 import GameContainer from './GameContainer';
 import ResultsScreen from './ResultsScreen';
 import RealWorldStory from './RealWorldStory';
 
-// Game states
 const GAME_STATES = {
   LANDING: 'landing',
-  TUTORIAL: 'tutorial',
+  EXPLAINER: 'explainer',
   PLAYING: 'playing',
   RESULTS: 'results',
   STORY: 'story'
@@ -17,7 +16,7 @@ const GAME_STATES = {
 const GameWrapper = () => {
   const [gameState, setGameState] = useState(GAME_STATES.LANDING);
   const [gameResult, setGameResult] = useState(null);
-  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+  const [hasSeenExplainer, setHasSeenExplainer] = useState(false);
   const [accessibilitySettings, setAccessibilitySettings] = useState({
     reduceMotion: false,
     colorBlind: false,
@@ -25,15 +24,20 @@ const GameWrapper = () => {
   });
 
   const handleStart = useCallback(() => {
-    if (!hasSeenTutorial) {
-      setGameState(GAME_STATES.TUTORIAL);
+    if (!hasSeenExplainer) {
+      setGameState(GAME_STATES.EXPLAINER);
     } else {
       setGameState(GAME_STATES.PLAYING);
     }
-  }, [hasSeenTutorial]);
+  }, [hasSeenExplainer]);
 
-  const handleTutorialComplete = useCallback(() => {
-    setHasSeenTutorial(true);
+  const handleExplainerComplete = useCallback(() => {
+    setHasSeenExplainer(true);
+    setGameState(GAME_STATES.PLAYING);
+  }, []);
+
+  const handleExplainerSkip = useCallback(() => {
+    setHasSeenExplainer(true);
     setGameState(GAME_STATES.PLAYING);
   }, []);
 
@@ -55,14 +59,8 @@ const GameWrapper = () => {
     setGameState(GAME_STATES.RESULTS);
   }, []);
 
-  const handleShare = useCallback((shareData) => {
-    console.log('Shared:', shareData);
-    // Analytics tracking would go here
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#0a0a12]">
-      {/* Landing Screen */}
       {gameState === GAME_STATES.LANDING && (
         <LandingScreen
           onStart={handleStart}
@@ -71,14 +69,15 @@ const GameWrapper = () => {
         />
       )}
 
-      {/* Tutorial */}
-      {gameState === GAME_STATES.TUTORIAL && (
-        <TutorialOverlay onComplete={handleTutorialComplete} />
+      {gameState === GAME_STATES.EXPLAINER && (
+        <AnimatedExplainer 
+          onComplete={handleExplainerComplete} 
+          onSkip={handleExplainerSkip}
+        />
       )}
 
-      {/* Game */}
       {gameState === GAME_STATES.PLAYING && (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="min-h-screen flex items-center justify-center p-2">
           <GameContainer
             onGameEnd={handleGameEnd}
             accessibilitySettings={accessibilitySettings}
@@ -86,17 +85,14 @@ const GameWrapper = () => {
         </div>
       )}
 
-      {/* Results */}
       {gameState === GAME_STATES.RESULTS && gameResult && (
         <ResultsScreen
           result={gameResult}
           onReplay={handleReplay}
-          onShare={handleShare}
           onLearnMore={handleLearnMore}
         />
       )}
 
-      {/* Real World Story */}
       {gameState === GAME_STATES.STORY && (
         <RealWorldStory onClose={handleStoryClose} />
       )}
