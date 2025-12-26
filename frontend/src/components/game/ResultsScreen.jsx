@@ -306,6 +306,26 @@ const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
     const scoreCardElement = document.getElementById('score-card-node');
     
     try {
+      // Prioritize sharing logic
+      // 1. Try to open LinkedIn URL immediately (popup blocker friendly)
+      const shareUrl = window.location.origin + '/play/greenshoe';
+      const linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption + ' ' + shareUrl)}`;
+      
+      // We open this FIRST if possible, but we want to download image too.
+      // If we await image, popup might be blocked.
+      // Strategy: Open window first, then do background work.
+      const shareWindow = window.open(linkedInUrl, '_blank', 'width=600,height=600');
+      
+      // 2. Copy caption
+      try {
+         await navigator.clipboard.writeText(caption);
+         setShareStatus('copied');
+         setTimeout(() => setShareStatus(null), 3000);
+      } catch (e) {
+         console.error("Clipboard copy failed", e);
+      }
+
+      // 3. Try to download image (background task)
       if (scoreCardElement) {
         // Create canvas from the score card
         const canvas = await html2canvas(scoreCardElement, {
@@ -326,14 +346,10 @@ const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
         });
       }
 
-      await navigator.clipboard.writeText(caption);
-      setShareStatus('copied');
-      
-      const shareUrl = window.location.origin + '/play/greenshoe';
-      const linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption + ' ' + shareUrl)}`;
-      window.open(linkedInUrl, '_blank', 'width=600,height=600');
-      
-      setTimeout(() => setShareStatus(null), 3000);
+      if (!shareWindow) {
+         // If popup blocked, try to navigate or show message
+         console.warn("Popup blocked");
+      }
     } catch (err) {
       console.error('Share failed:', err);
     }

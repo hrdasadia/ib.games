@@ -337,7 +337,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     // Full screen feedback overlay
     this.feedbackContainer = this.add.container(width / 2, height / 2);
     
-    this.feedbackBg = this.add.rectangle(0, 0, width, height, 0x000000, 0.85);
+    this.feedbackBg = this.add.rectangle(0, 0, width, height, 0x000000, 0.9);
     this.feedbackContainer.add(this.feedbackBg);
     
     this.feedbackIcon = this.add.text(0, -60, '✓', {
@@ -346,17 +346,21 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.feedbackContainer.add(this.feedbackIcon);
     
     this.feedbackTitle = this.add.text(0, 10, 'CORRECT!', {
-      fontFamily: 'monospace', fontSize: '28px', fontStyle: 'bold', color: '#00ff88'
+      fontFamily: 'monospace', fontSize: '24px', fontStyle: 'bold', color: '#00ff88',
+      wordWrap: { width: width - 60, useAdvancedWrap: true },
+      align: 'center'
     }).setOrigin(0.5);
     this.feedbackContainer.add(this.feedbackTitle);
     
     this.feedbackDesc = this.add.text(0, 50, 'Price stabilized', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#aaa'
+      fontFamily: 'monospace', fontSize: '12px', color: '#aaa',
+      wordWrap: { width: width - 80, useAdvancedWrap: true },
+      align: 'center', lineSpacing: 4
     }).setOrigin(0.5);
     this.feedbackContainer.add(this.feedbackDesc);
     
-    this.feedbackPriceChange = this.add.text(0, 85, '', {
-      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#fff'
+    this.feedbackPriceChange = this.add.text(0, 100, '', {
+      fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#fff'
     }).setOrigin(0.5);
     this.feedbackContainer.add(this.feedbackPriceChange);
     
