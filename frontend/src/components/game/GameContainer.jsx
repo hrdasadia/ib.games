@@ -978,10 +978,12 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.gameState.score.liquidity = Math.min(200, this.gameState.score.liquidity + 16);
     
     // Reputation based on making good decisions and low volatility
-    if (isCorrect && priceDeviation < 5) {
-      this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 14);
-    } else if (priceDeviation < 3) {
-      this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 8);
+    if (isCorrect) {
+       if (priceDeviation < 3) {
+          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 14);
+       } else if (priceDeviation < 5) {
+          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 8);
+       }
     }
   }
 

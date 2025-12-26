@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import html2canvas from 'html2canvas';
 import { 
   Trophy, RefreshCw, Share2, ChevronRight, ChevronLeft, BookOpen, Star, 
   TrendingUp, TrendingDown, Target, Shield, Zap, Lightbulb, Home,
@@ -36,7 +37,7 @@ const ScoreCard = ({ result }) => {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-5 border border-white/10">
+    <div id="score-card-node" className="bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-5 border border-white/10">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -247,12 +248,35 @@ const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
       .replace('{score}', result.totalScore)
       .replace('{rank}', result.rank);
 
+    // Find the score card element
+    const scoreCardElement = document.getElementById('score-card-node');
+    
     try {
+      if (scoreCardElement) {
+        // Create canvas from the score card
+        const canvas = await window.html2canvas(scoreCardElement, {
+            backgroundColor: '#1a1a2e',
+            scale: 2 // Higher quality
+        });
+        
+        // Convert to blob and download
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `IB_Games_Scorecard_${result.totalScore}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+      }
+
       await navigator.clipboard.writeText(caption);
       setShareStatus('copied');
       
       const shareUrl = window.location.origin + '/play/greenshoe';
-      const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+      const linkedInUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption + ' ' + shareUrl)}`;
       window.open(linkedInUrl, '_blank', 'width=600,height=600');
       
       setTimeout(() => setShareStatus(null), 3000);

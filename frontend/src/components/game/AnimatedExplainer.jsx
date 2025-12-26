@@ -212,7 +212,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#0a0a12] via-[#0d1020] to-[#0a0a12] flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-[#0a0a12] via-[#0d1020] to-[#0a0a12] flex flex-col">
       {/* Skip button */}
       <div className="absolute top-4 right-4 z-10">
         <button
