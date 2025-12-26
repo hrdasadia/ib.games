@@ -197,17 +197,17 @@ class GreenshoeGameScene extends Phaser.Scene {
         id: 'nothing', 
         label: 'DO\nNOTHING', 
         sublabel: 'Let it ride',
-        color: 0x444444, 
+        color: 0x555555, 
         icon: '⏸️',
-        hint: 'Use when price\nis STABLE'
+        hint: 'STABLE price'
       },
       { 
         id: 'supply', 
         label: 'ADD\nSUPPLY', 
         sublabel: 'Greenshoe',
-        color: 0x00aa55, 
+        color: 0x00bb55, 
         icon: '📈',
-        hint: 'Use when price\nis RISING'
+        hint: 'RISING price'
       }
     ];
     
@@ -216,52 +216,70 @@ class GreenshoeGameScene extends Phaser.Scene {
     buttons.forEach((btn, i) => {
       const x = 15 + i * (buttonWidth + 10) + buttonWidth / 2;
       
-      // Button background
-      const bg = this.add.rectangle(x, buttonY, buttonWidth, buttonHeight, btn.color, 0.2)
-        .setStrokeStyle(2, btn.color, 0.6)
+      // Button background with rounded corners effect
+      const bg = this.add.rectangle(x, buttonY, buttonWidth - 4, buttonHeight - 4, btn.color, 0.25)
+        .setStrokeStyle(3, btn.color, 0.9)
         .setInteractive({ useHandCursor: true });
       
-      // Glow effect (hidden by default)
-      const glow = this.add.rectangle(x, buttonY, buttonWidth + 10, buttonHeight + 10, btn.color, 0)
-        .setStrokeStyle(4, btn.color, 0);
+      // Outer glow (shows on hover/active)
+      const glow = this.add.rectangle(x, buttonY, buttonWidth + 6, buttonHeight + 6, btn.color, 0)
+        .setStrokeStyle(3, btn.color, 0);
       
-      // Icon
-      const icon = this.add.text(x, buttonY - 28, btn.icon, {
-        fontSize: '24px'
+      // Icon (larger and clearer)
+      const icon = this.add.text(x, buttonY - 25, btn.icon, {
+        fontSize: '28px'
       }).setOrigin(0.5);
       
-      // Label
-      const label = this.add.text(x, buttonY + 5, btn.label, {
-        fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#fff',
-        align: 'center'
+      // Label (cleaner, no overflow)
+      const label = this.add.text(x, buttonY + 8, btn.label, {
+        fontFamily: 'monospace', fontSize: '11px', fontStyle: 'bold', color: '#fff',
+        align: 'center', lineSpacing: 2
       }).setOrigin(0.5);
       
       // Sublabel
-      const sublabel = this.add.text(x, buttonY + 35, btn.sublabel, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#888'
+      const sublabel = this.add.text(x, buttonY + 36, btn.sublabel, {
+        fontFamily: 'monospace', fontSize: '9px', color: '#aaa'
       }).setOrigin(0.5);
       
-      // Hint text (when to use)
-      const hint = this.add.text(x, buttonY + 55, btn.hint, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#555', align: 'center'
+      // Hint text (cleaner)
+      const hint = this.add.text(x, buttonY + 52, btn.hint, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#666', align: 'center'
       }).setOrigin(0.5);
       
-      // Button interactions
+      // Button interactions - more pronounced feedback
       bg.on('pointerover', () => {
         if (this.gameState.inDecisionMode) {
-          bg.setFillStyle(btn.color, 0.4);
-          glow.setAlpha(0.3);
+          bg.setFillStyle(btn.color, 0.5);
+          bg.setStrokeStyle(3, 0xffffff, 1);
+          glow.setAlpha(0.4);
+          this.tweens.add({
+            targets: bg,
+            scaleX: 1.03,
+            scaleY: 1.03,
+            duration: 100
+          });
         }
       });
       
       bg.on('pointerout', () => {
-        bg.setFillStyle(btn.color, 0.2);
+        bg.setFillStyle(btn.color, 0.25);
+        bg.setStrokeStyle(3, btn.color, 0.9);
+        bg.setScale(1);
         glow.setAlpha(0);
       });
       
       bg.on('pointerdown', () => {
         if (this.gameState.inDecisionMode) {
-          this.makeDecision(btn.id);
+          // Click feedback
+          bg.setFillStyle(btn.color, 0.7);
+          this.tweens.add({
+            targets: bg,
+            scaleX: 0.95,
+            scaleY: 0.95,
+            duration: 50,
+            yoyo: true,
+            onComplete: () => this.makeDecision(btn.id)
+          });
         }
       });
       
@@ -270,9 +288,9 @@ class GreenshoeGameScene extends Phaser.Scene {
     });
     
     // Disabled overlay
-    this.buttonsDisabledOverlay = this.add.rectangle(width/2, buttonY, width, buttonHeight + 20, 0x000000, 0.7);
-    this.buttonsDisabledText = this.add.text(width/2, buttonY, 'Waiting for market...', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#666'
+    this.buttonsDisabledOverlay = this.add.rectangle(width/2, buttonY, width, buttonHeight + 20, 0x000000, 0.75);
+    this.buttonsDisabledText = this.add.text(width/2, buttonY, 'Waiting for scenario...', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#555'
     }).setOrigin(0.5);
     
     this.setButtonsEnabled(false);
