@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import html2canvas from 'html2canvas';
+import confetti from 'canvas-confetti';
 import { 
   Trophy, RefreshCw, Share2, ChevronRight, ChevronLeft, BookOpen, Star, 
   TrendingUp, TrendingDown, Target, Shield, Zap, Lightbulb, Home,
-  CheckCircle, AlertTriangle, XCircle
+  CheckCircle, AlertTriangle, XCircle, Info
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip"
 import { Button } from '../ui/button';
 import { useNavigate } from 'react-router-dom';
 import { LEARNING_BULLETS, LINKEDIN_CAPTION_TEMPLATE } from '../../data/mockData';
@@ -91,15 +98,23 @@ const ScoreCard = ({ result }) => {
       {/* Badges */}
       {result.badges && result.badges.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10">
-          {result.badges.map(badge => (
-            <div 
-              key={badge.id}
-              className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400 flex items-center gap-1.5"
-            >
-              <Star className="w-3 h-3" />
-              {badge.name}
-            </div>
-          ))}
+          <TooltipProvider>
+            {result.badges.map(badge => (
+              <Tooltip key={badge.id}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="cursor-help px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400 flex items-center gap-1.5 hover:bg-amber-500/20 transition-colors"
+                  >
+                    <Star className="w-3 h-3" />
+                    {badge.name}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-900 border border-slate-700 text-white max-w-[200px]">
+                  <p>{BADGE_DESCRIPTIONS[badge.name] || 'Awarded for exceptional gameplay.'}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
         </div>
       )}
     </div>
@@ -209,7 +224,7 @@ const MetricAnalysis = ({ result }) => {
         </div>
         <div className="bg-white/5 rounded-lg p-3 text-center">
           <div className="text-xl font-bold text-amber-400">{3 - (result.greenshoesUsed || 0)}</div>
-          <div className="text-xs text-white/40">GS Left</div>
+          <div className="text-xs text-white/40">Greenshoes</div>
         </div>
       </div>
 
@@ -238,10 +253,49 @@ const MetricAnalysis = ({ result }) => {
   );
 };
 
+const BADGE_DESCRIPTIONS = {
+  'Sharp Instincts': 'Achieved >80% decision accuracy. You read the market like a pro!',
+  'Price Master': 'Kept the final price within $3 of the target. Precision stabilization.',
+  'Budget Hawk': 'Maintained >40% of your stabilization budget. Efficiency expert.',
+  'Reserved Power': 'Saved at least 1 Greenshoe option for emergencies. Strategic reserve.'
+};
+
 const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
   const [activeTab, setActiveTab] = useState('score');
   const [shareStatus, setShareStatus] = useState(null);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (result.totalScore >= 700) {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+      const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({
+          ...defaults, 
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+        });
+        confetti({
+          ...defaults, 
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+        });
+      }, 250);
+
+      return () => clearInterval(interval);
+    }
+  }, [result.totalScore]);
 
   const handleShare = async () => {
     const caption = LINKEDIN_CAPTION_TEMPLATE

@@ -744,15 +744,27 @@ class GreenshoeGameScene extends Phaser.Scene {
         this.updateGreenshoeDisplay();
         decisionResult = 'wrong_supply_stable';
       } else if (action === 'nothing' && scenario.type === 'rising') {
-        // Wrong: Did nothing when price was rising
-        // Price rises unchecked
-        finalPriceChange = scenario.priceMove * 1.1;
-        decisionResult = 'wrong_nothing_rising';
+        if (Math.abs(scenario.priceMove) < 4) {
+           // Small rise, do nothing is arguably strategic/cautious
+           finalPriceChange = scenario.priceMove * 1.1;
+           decisionResult = 'cautious_nothing_rising';
+        } else {
+           // Wrong: Did nothing when price was rising fast
+           // Price rises unchecked
+           finalPriceChange = scenario.priceMove * 1.1;
+           decisionResult = 'wrong_nothing_rising';
+        }
       } else if (action === 'nothing' && scenario.type === 'falling') {
-        // Wrong: Did nothing when price was falling
-        // Price falls unchecked
-        finalPriceChange = scenario.priceMove * 1.1;
-        decisionResult = 'wrong_nothing_falling';
+         if (Math.abs(scenario.priceMove) < 4) {
+            // Small fall
+            finalPriceChange = scenario.priceMove * 1.1;
+            decisionResult = 'cautious_nothing_falling';
+         } else {
+            // Wrong: Did nothing when price was falling fast
+            // Price falls unchecked
+            finalPriceChange = scenario.priceMove * 1.1;
+            decisionResult = 'wrong_nothing_falling';
+         }
       }
     }
     
@@ -823,6 +835,18 @@ class GreenshoeGameScene extends Phaser.Scene {
         title: 'WASTED GREENSHOE!',
         color: '#ff8844',
         desc: 'Market was stable — adding supply was unnecessary and pushed price down.'
+      },
+      'cautious_nothing_rising': {
+        icon: '⚠️',
+        title: 'MISSED CHANCE',
+        color: '#ffaa00', // Amber/Orange instead of red
+        desc: 'Price is drifting up. Saving greenshoes is smart, but watch out for momentum!'
+      },
+      'cautious_nothing_falling': {
+        icon: '⚠️',
+        title: 'MISSED CHANCE',
+        color: '#ffaa00',
+        desc: 'Price is drifting down. Saving budget is smart, but don\'t let it slide too far!'
       },
       'wrong_nothing_rising': {
         icon: '✗',
