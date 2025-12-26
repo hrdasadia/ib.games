@@ -33,7 +33,7 @@ class GreenshoeGameScene extends Phaser.Scene {
       gameOver: false,
       inDecisionMode: false,
       decisionTimer: 0,
-      decisionTimeLimit: 4, // 4 seconds to decide
+      decisionTimeLimit: 5, // 5 seconds to decide
       currentScenario: null,
       score: { stability: 0, liquidity: 0, efficiency: 0, reputation: 0 },
       decisions: [], // Track all decisions made
