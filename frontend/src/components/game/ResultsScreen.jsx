@@ -254,7 +254,7 @@ const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
     try {
       if (scoreCardElement) {
         // Create canvas from the score card
-        const canvas = await window.html2canvas(scoreCardElement, {
+        const canvas = await html2canvas(scoreCardElement, {
             backgroundColor: '#1a1a2e',
             scale: 2 // Higher quality
         });
