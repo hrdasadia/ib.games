@@ -1008,53 +1008,56 @@ class GreenshoeGameScene extends Phaser.Scene {
   endGame() {
     this.gameState.gameOver = true;
     
-    // Calculate final score
-    const accuracyBonus = (this.gameState.correctDecisions / this.gameState.totalDecisions) * 200;
-    const priceBonus = Math.max(0, 100 - Math.abs(this.gameState.price - 100) * 10);
+    // Ensure all scores are capped at their maximums
+    const finalScores = {
+      stability: Math.min(400, Math.max(0, Math.round(this.gameState.score.stability))),
+      liquidity: Math.min(200, Math.max(0, Math.round(this.gameState.score.liquidity))),
+      efficiency: Math.min(200, Math.max(0, Math.round(this.gameState.score.efficiency))),
+      reputation: Math.min(200, Math.max(0, Math.round(this.gameState.score.reputation)))
+    };
     
-    const totalScore = Math.round(
-      this.gameState.score.stability +
-      this.gameState.score.liquidity +
-      this.gameState.score.efficiency +
-      this.gameState.score.reputation +
-      accuracyBonus +
-      priceBonus
+    // Calculate total score (max 1000)
+    const totalScore = Math.min(1000, 
+      finalScores.stability + 
+      finalScores.liquidity + 
+      finalScores.efficiency + 
+      finalScores.reputation
     );
     
+    // Determine rank based on total score
     let rank = 'Analyst';
-    if (totalScore >= 800) rank = 'Managing Director';
-    else if (totalScore >= 650) rank = 'Director';
-    else if (totalScore >= 500) rank = 'VP';
-    else if (totalScore >= 350) rank = 'Associate';
+    if (totalScore >= 850) rank = 'Managing Director';
+    else if (totalScore >= 700) rank = 'Director';
+    else if (totalScore >= 550) rank = 'VP';
+    else if (totalScore >= 400) rank = 'Associate';
     
+    // Award badges for achievements
     const badges = [];
-    if (this.gameState.correctDecisions >= 10) badges.push({ id: 'accurate', name: 'Sharp Instincts' });
+    const accuracy = this.gameState.totalDecisions > 0 
+      ? this.gameState.correctDecisions / this.gameState.totalDecisions 
+      : 0;
+    
+    if (accuracy >= 0.8) badges.push({ id: 'accurate', name: 'Sharp Instincts' });
     if (Math.abs(this.gameState.price - 100) < 3) badges.push({ id: 'stable', name: 'Price Master' });
-    if (this.gameState.stabilizationBudget > 30) badges.push({ id: 'efficient', name: 'Budget Hawk' });
-    if (this.gameState.greenshoesRemaining > 0) badges.push({ id: 'reserved', name: 'Reserved Power' });
+    if (this.gameState.stabilizationBudget > 40) badges.push({ id: 'efficient', name: 'Budget Hawk' });
+    if (this.gameState.greenshoesRemaining >= 1) badges.push({ id: 'reserved', name: 'Reserved Power' });
     
     if (this.callbacks.audioManager) {
-      this.callbacks.audioManager.playGameEnd(totalScore >= 500);
+      this.callbacks.audioManager.playGameEnd(totalScore >= 550);
     }
     
     const finalResult = {
       totalScore,
       rank,
       badges,
-      scores: {
-        stability: Math.round(this.gameState.score.stability + priceBonus),
-        liquidity: Math.round(this.gameState.score.liquidity),
-        efficiency: Math.round(this.gameState.score.efficiency + accuracyBonus),
-        reputation: Math.round(this.gameState.score.reputation)
-      },
+      scores: finalScores,
       priceHistory: this.gameState.priceHistory,
       finalPrice: this.gameState.price,
       budgetRemaining: this.gameState.stabilizationBudget,
       greenshoesUsed: 3 - this.gameState.greenshoesRemaining,
       correctDecisions: this.gameState.correctDecisions,
       totalDecisions: this.gameState.totalDecisions,
-      maxVolatility: 0.1,
-      perfectGreenshoes: this.gameState.correctDecisions
+      maxVolatility: 0.1
     };
     
     if (this.callbacks.onGameEnd) {
