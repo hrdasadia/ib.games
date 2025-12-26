@@ -1,88 +1,101 @@
 import React, { useState } from 'react';
 import { 
-  Trophy, RefreshCw, Share2, ChevronRight, BookOpen, Star, 
-  TrendingUp, TrendingDown, Target, Shield, Zap, AlertTriangle,
-  CheckCircle, Lightbulb, DollarSign, Clock
+  Trophy, RefreshCw, Share2, ChevronRight, ChevronLeft, BookOpen, Star, 
+  TrendingUp, TrendingDown, Target, Shield, Zap, Lightbulb, Home,
+  CheckCircle, AlertTriangle, XCircle
 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useNavigate } from 'react-router-dom';
 import { LEARNING_BULLETS, LINKEDIN_CAPTION_TEMPLATE } from '../../data/mockData';
 
 // Rank explanations
 const RANK_INFO = {
-  'Managing Director': { abbrev: 'MD', description: 'Top performer! Like a senior executive at a bank.', color: 'from-amber-400 to-yellow-500' },
-  'Director': { abbrev: 'D', description: 'Excellent work! Senior leadership level.', color: 'from-purple-400 to-indigo-500' },
-  'VP': { abbrev: 'VP', description: 'Great job! Vice President level performance.', color: 'from-cyan-400 to-blue-500' },
-  'Associate': { abbrev: 'A', description: 'Good start! Mid-level banker performance.', color: 'from-emerald-400 to-green-500' },
+  'Managing Director': { abbrev: 'MD', description: 'Exceptional! Top-tier performance.', color: 'from-amber-400 to-yellow-500' },
+  'Director': { abbrev: 'D', description: 'Excellent! Senior leadership level.', color: 'from-purple-400 to-indigo-500' },
+  'VP': { abbrev: 'VP', description: 'Great job! Vice President level.', color: 'from-cyan-400 to-blue-500' },
+  'Associate': { abbrev: 'A', description: 'Good start! Mid-level performance.', color: 'from-emerald-400 to-green-500' },
   'Analyst': { abbrev: 'AN', description: 'Entry level. Keep practicing!', color: 'from-gray-400 to-slate-500' }
 };
 
 const ScoreCard = ({ result }) => {
-  const rankInfo = RANK_INFO[result.rank];
+  const rankInfo = RANK_INFO[result.rank] || RANK_INFO['Analyst'];
+
+  // Ensure scores are capped at their maximums
+  const scores = {
+    stability: Math.min(400, Math.max(0, Math.round(result.scores?.stability || 0))),
+    liquidity: Math.min(200, Math.max(0, Math.round(result.scores?.liquidity || 0))),
+    efficiency: Math.min(200, Math.max(0, Math.round(result.scores?.efficiency || 0))),
+    reputation: Math.min(200, Math.max(0, Math.round(result.scores?.reputation || 0)))
+  };
+
+  const scoreItems = [
+    { name: 'Stability', value: scores.stability, max: 400, icon: Target, color: 'cyan' },
+    { name: 'Liquidity', value: scores.liquidity, max: 200, icon: TrendingUp, color: 'emerald' },
+    { name: 'Efficiency', value: scores.efficiency, max: 200, icon: Zap, color: 'amber' },
+    { name: 'Reputation', value: scores.reputation, max: 200, icon: Shield, color: 'purple' }
+  ];
 
   return (
-    <div 
-      id="score-card"
-      className="bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-6 border border-white/10 w-full"
-    >
+    <div className="bg-gradient-to-br from-[#0d1020] to-[#1a1a2e] rounded-2xl p-5 border border-white/10">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="text-cyan-400 text-sm font-mono mb-1">IB.GAMES</div>
-          <h2 className="text-white text-xl font-bold">Greenshoe Sprint</h2>
+          <div className="text-cyan-400 text-xs font-mono mb-1">IB.GAMES</div>
+          <h2 className="text-white text-lg font-bold">Greenshoe Sprint</h2>
         </div>
         <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${rankInfo.color} flex items-center justify-center shadow-lg`}>
           <span className="text-white font-bold text-lg">{rankInfo.abbrev}</span>
         </div>
       </div>
 
-      {/* Score */}
-      <div className="text-center mb-4">
-        <div className="text-5xl font-bold text-white mb-1">{result.totalScore}</div>
-        <div className="text-white/50 text-sm">out of 1000</div>
+      {/* Total Score */}
+      <div className="text-center mb-5 py-4 bg-white/5 rounded-xl">
+        <div className="text-4xl font-bold text-white mb-1">{result.totalScore}</div>
+        <div className="text-white/40 text-sm">out of 1000 points</div>
         <div className={`inline-block mt-2 px-4 py-1 rounded-full bg-gradient-to-r ${rankInfo.color} text-white text-sm font-semibold`}>
           {result.rank}
         </div>
-        <div className="text-white/40 text-xs mt-1">{rankInfo.description}</div>
       </div>
 
       {/* Score breakdown */}
-      <div className="space-y-2 mb-4">
-        {[
-          { name: 'Stability', value: Math.round(result.scores.stability), max: 400, icon: Target, tip: 'How close price stayed to $100' },
-          { name: 'Liquidity', value: Math.round(result.scores.liquidity), max: 200, icon: TrendingUp, tip: 'Healthy trading volume' },
-          { name: 'Efficiency', value: Math.round(result.scores.efficiency), max: 200, icon: Zap, tip: 'Smart use of your tools' },
-          { name: 'Reputation', value: Math.round(result.scores.reputation), max: 200, icon: Shield, tip: 'Avoided wild swings' }
-        ].map(score => (
-          <div key={score.name} className="group">
-            <div className="flex items-center gap-2">
-              <score.icon className="w-4 h-4 text-white/40" />
-              <div className="flex-1">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-white/70">{score.name}</span>
-                  <span className="text-white font-mono">{score.value}/{score.max}</span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 rounded-full"
-                    style={{ width: `${(score.value / score.max) * 100}%` }}
-                  />
-                </div>
+      <div className="space-y-3">
+        {scoreItems.map(score => {
+          const percentage = (score.value / score.max) * 100;
+          return (
+            <div key={score.name}>
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="flex items-center gap-2 text-white/70">
+                  <score.icon className="w-4 h-4" />
+                  {score.name}
+                </span>
+                <span className="text-white font-mono font-medium">
+                  {score.value}<span className="text-white/40">/{score.max}</span>
+                </span>
+              </div>
+              <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r ${
+                    percentage >= 70 ? 'from-emerald-500 to-emerald-400' :
+                    percentage >= 40 ? 'from-amber-500 to-amber-400' :
+                    'from-red-500 to-red-400'
+                  }`}
+                  style={{ width: `${percentage}%` }}
+                />
               </div>
             </div>
-            <div className="text-white/30 text-xs ml-6 mt-0.5">{score.tip}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Badges */}
       {result.badges && result.badges.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10">
           {result.badges.map(badge => (
             <div 
               key={badge.id}
-              className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/70 flex items-center gap-1"
+              className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400 flex items-center gap-1.5"
             >
-              <Star className="w-3 h-3 text-yellow-400" />
+              <Star className="w-3 h-3" />
               {badge.name}
             </div>
           ))}
@@ -92,262 +105,192 @@ const ScoreCard = ({ result }) => {
   );
 };
 
-const PerformanceBreakdown = ({ result }) => {
-  const insights = [];
-  const improvements = [];
+const MetricAnalysis = ({ result }) => {
+  // Calculate percentages for analysis
+  const scores = {
+    stability: Math.min(400, Math.max(0, result.scores?.stability || 0)),
+    liquidity: Math.min(200, Math.max(0, result.scores?.liquidity || 0)),
+    efficiency: Math.min(200, Math.max(0, result.scores?.efficiency || 0)),
+    reputation: Math.min(200, Math.max(0, result.scores?.reputation || 0))
+  };
 
-  // Calculate performance thresholds based on actual scores
-  const stabilityPercent = (result.scores.stability / 400) * 100;
-  const efficiencyPercent = (result.scores.efficiency / 200) * 100;
-  const reputationPercent = (result.scores.reputation / 200) * 100;
-  const liquidityPercent = (result.scores.liquidity / 200) * 100;
+  const stabilityPct = (scores.stability / 400) * 100;
+  const liquidityPct = (scores.liquidity / 200) * 100;
+  const efficiencyPct = (scores.efficiency / 200) * 100;
+  const reputationPct = (scores.reputation / 200) * 100;
+  
+  const accuracy = result.totalDecisions > 0 
+    ? Math.round((result.correctDecisions / result.totalDecisions) * 100) 
+    : 0;
 
-  const priceDeviation = Math.abs(result.finalPrice - 100);
-
-  // === PRICE STABILITY ANALYSIS ===
-  if (stabilityPercent >= 70) {
-    insights.push({
-      type: 'success',
-      title: 'Strong Price Stability',
-      message: `Final price $${result.finalPrice.toFixed(2)} — you kept it close to the $100 target.`,
-      icon: CheckCircle
-    });
-  } else if (result.finalPrice > 108) {
-    insights.push({
-      type: 'warning',
-      title: 'Price Ran Too High',
-      message: `Final price $${result.finalPrice.toFixed(2)} — demand overheated beyond the target.`,
-      icon: TrendingUp
-    });
-    improvements.push('Use greenshoes earlier when you see price climbing above $105 to release more shares and cool demand.');
-  } else if (result.finalPrice < 95) {
-    insights.push({
-      type: 'warning',
-      title: 'Price Dropped Too Low',
-      message: `Final price $${result.finalPrice.toFixed(2)} — insufficient support during selloffs.`,
-      icon: TrendingDown
-    });
-    improvements.push('Hold longer during price dips to provide buy support. Watch for the price turning red as your cue.');
-  } else {
-    insights.push({
-      type: 'info',
-      title: 'Price Stability',
-      message: `Final price $${result.finalPrice.toFixed(2)} — moderate deviation from target.`,
-      icon: Target
-    });
-    improvements.push('Try to keep price within $98-$102 for best stability scores.');
-  }
-
-  // === GREENSHOE ANALYSIS (Based on efficiency score) ===
-  if (result.greenshoesUsed === 0) {
-    insights.push({
-      type: 'warning',
-      title: 'Greenshoes Not Used',
-      message: 'You didn\'t tap to use any greenshoe options during the run.',
-      icon: AlertTriangle
-    });
-    improvements.push('TAP when price spikes above $105 to release extra shares. This cools overheating demand.');
-  } else if (efficiencyPercent >= 60) {
-    insights.push({
-      type: 'success',
-      title: 'Well-Timed Greenshoes',
-      message: `Used ${result.greenshoesUsed}/3 greenshoes at good moments to manage supply.`,
-      icon: CheckCircle
-    });
-  } else if (efficiencyPercent >= 30) {
-    insights.push({
-      type: 'info',
-      title: 'Greenshoe Timing Could Improve',
-      message: `Used ${result.greenshoesUsed}/3 greenshoes, but timing wasn't optimal.`,
-      icon: Clock
-    });
-    improvements.push('Greenshoes work best when price is spiking above $105. Using them when price is stable or low wastes their effect.');
-  } else {
-    insights.push({
-      type: 'warning',
-      title: 'Poor Greenshoe Timing',
-      message: `Used ${result.greenshoesUsed}/3 greenshoes at suboptimal times — low efficiency score.`,
-      icon: AlertTriangle
-    });
-    improvements.push('Don\'t panic-tap greenshoes. Wait for clear demand surges (price >$105) before releasing extra shares.');
-  }
-
-  // === BUDGET USAGE ANALYSIS ===
-  const budgetUsed = 100 - result.budgetRemaining;
-  if (budgetUsed < 20 && result.finalPrice < 98) {
-    insights.push({
-      type: 'warning',
-      title: 'Stabilization Underused',
-      message: `Only used ${budgetUsed.toFixed(0)}% of budget while price was falling.`,
-      icon: DollarSign
-    });
-    improvements.push('HOLD the screen longer when price drops below $98. Your buy support pushes the price back up.');
-  } else if (budgetUsed > 80 && result.budgetRemaining < 20) {
-    insights.push({
-      type: 'info',
-      title: 'Heavy Stabilization',
-      message: `Used ${budgetUsed.toFixed(0)}% of your budget — you were very active.`,
-      icon: Shield
-    });
-    if (stabilityPercent < 50) {
-      improvements.push('You spent a lot on stabilization but price still drifted. Try combining holds with greenshoes for better effect.');
+  const analyses = [
+    {
+      metric: 'Stability',
+      score: scores.stability,
+      max: 400,
+      icon: Target,
+      status: stabilityPct >= 60 ? 'good' : stabilityPct >= 30 ? 'moderate' : 'poor',
+      analysis: stabilityPct >= 60 
+        ? `Excellent price control! Final price $${result.finalPrice?.toFixed(2) || '100.00'} stayed close to the $100 target.`
+        : stabilityPct >= 30
+        ? `Moderate stability. Price drifted to $${result.finalPrice?.toFixed(2) || '100.00'}. Try to intervene earlier when price moves away from $100.`
+        : `Price became unstable at $${result.finalPrice?.toFixed(2) || '100.00'}. Remember: ADD DEMAND when falling, ADD SUPPLY when rising.`,
+      tip: stabilityPct < 60 ? 'React to price movements quickly but choose the RIGHT action based on direction.' : null
+    },
+    {
+      metric: 'Efficiency',
+      score: scores.efficiency,
+      max: 200,
+      icon: Zap,
+      status: efficiencyPct >= 60 ? 'good' : efficiencyPct >= 30 ? 'moderate' : 'poor',
+      analysis: efficiencyPct >= 60
+        ? `Great decision-making! You made ${result.correctDecisions || 0}/${result.totalDecisions || 0} correct calls (${accuracy}% accuracy).`
+        : efficiencyPct >= 30
+        ? `${accuracy}% accuracy (${result.correctDecisions || 0}/${result.totalDecisions || 0} correct). Some decisions backfired or wasted resources.`
+        : `Low accuracy at ${accuracy}%. Many actions were wrong for the situation, making the price worse.`,
+      tip: efficiencyPct < 60 ? 'Match your action to the scenario: falling→demand, rising→supply, stable→nothing.' : null
+    },
+    {
+      metric: 'Liquidity',
+      score: scores.liquidity,
+      max: 200,
+      icon: TrendingUp,
+      status: liquidityPct >= 60 ? 'good' : liquidityPct >= 30 ? 'moderate' : 'poor',
+      analysis: liquidityPct >= 60
+        ? 'Strong market liquidity maintained throughout all 12 rounds.'
+        : liquidityPct >= 30
+        ? 'Moderate liquidity. Some rounds had thin trading conditions.'
+        : 'Liquidity was poor. Erratic decisions may have scared off market participants.',
+      tip: liquidityPct < 60 ? 'Consistent, well-timed decisions build market confidence.' : null
+    },
+    {
+      metric: 'Reputation',
+      score: scores.reputation,
+      max: 200,
+      icon: Shield,
+      status: reputationPct >= 60 ? 'good' : reputationPct >= 30 ? 'moderate' : 'poor',
+      analysis: reputationPct >= 60
+        ? 'Excellent reputation! Smooth trading with minimal volatility spikes.'
+        : reputationPct >= 30
+        ? 'Moderate reputation. Some volatile moments hurt your standing.'
+        : 'Reputation suffered due to high volatility and poor price control.',
+      tip: reputationPct < 60 ? 'Avoid wrong interventions that amplify price swings.' : null
     }
-  } else if (result.budgetRemaining > 40 && stabilityPercent >= 60) {
-    insights.push({
-      type: 'success',
-      title: 'Efficient Budget Use',
-      message: `${result.budgetRemaining.toFixed(0)}% budget remaining — balanced intervention.`,
-      icon: CheckCircle
-    });
-  }
+  ];
 
-  // === VOLATILITY ANALYSIS ===
-  if (result.maxVolatility > 0.15) {
-    insights.push({
-      type: 'warning',
-      title: 'High Volatility Periods',
-      message: 'Market got very choppy during your run, hurting reputation.',
-      icon: AlertTriangle
-    });
-    improvements.push('React faster to demand surges. When volatility spikes (indicator turns red), immediately stabilize or use greenshoe.');
-  } else if (reputationPercent >= 70) {
-    insights.push({
-      type: 'success',
-      title: 'Smooth Trading',
-      message: 'You kept volatility under control — good for reputation.',
-      icon: CheckCircle
-    });
-  }
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'good': return <CheckCircle className="w-5 h-5 text-emerald-400" />;
+      case 'moderate': return <AlertTriangle className="w-5 h-5 text-amber-400" />;
+      default: return <XCircle className="w-5 h-5 text-red-400" />;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'good': return 'border-emerald-500/30 bg-emerald-500/5';
+      case 'moderate': return 'border-amber-500/30 bg-amber-500/5';
+      default: return 'border-red-500/30 bg-red-500/5';
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* What Happened */}
-      <div className="space-y-3">
-        <h3 className="text-white font-semibold flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-cyan-400" />
-          What Happened
-        </h3>
-        
-        {insights.map((insight, i) => (
-          <div 
-            key={i}
-            className={`p-4 rounded-xl border ${
-              insight.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20' :
-              insight.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20' :
-              'bg-white/5 border-white/10'
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <insight.icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                insight.type === 'success' ? 'text-emerald-400' :
-                insight.type === 'warning' ? 'text-amber-400' :
-                'text-cyan-400'
-              }`} />
-              <div>
-                <div className="text-white font-medium text-sm">{insight.title}</div>
-                <div className="text-white/60 text-sm mt-0.5">{insight.message}</div>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-white/5 rounded-lg p-3 text-center">
+          <div className="text-xl font-bold text-cyan-400">{result.correctDecisions || 0}/{result.totalDecisions || 0}</div>
+          <div className="text-xs text-white/40">Correct</div>
+        </div>
+        <div className="bg-white/5 rounded-lg p-3 text-center">
+          <div className="text-xl font-bold text-emerald-400">${result.finalPrice?.toFixed(0) || '100'}</div>
+          <div className="text-xs text-white/40">Final Price</div>
+        </div>
+        <div className="bg-white/5 rounded-lg p-3 text-center">
+          <div className="text-xl font-bold text-amber-400">{3 - (result.greenshoesUsed || 0)}</div>
+          <div className="text-xs text-white/40">GS Left</div>
+        </div>
       </div>
 
-      {/* How to Improve */}
-      {improvements.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-white font-semibold flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-amber-400" />
-            How to Improve
-          </h3>
-          <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl p-4 border border-amber-500/20">
-            <ul className="space-y-3">
-              {improvements.map((tip, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-white/80">
-                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  {tip}
-                </li>
-              ))}
-            </ul>
+      {/* Per-metric analysis */}
+      {analyses.map((item, i) => (
+        <div key={i} className={`p-4 rounded-xl border ${getStatusColor(item.status)}`}>
+          <div className="flex items-start gap-3">
+            {getStatusIcon(item.status)}
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold text-white">{item.metric}</span>
+                <span className="text-sm text-white/50">{item.score}/{item.max}</span>
+              </div>
+              <p className="text-sm text-white/70 mb-2">{item.analysis}</p>
+              {item.tip && (
+                <div className="flex items-start gap-2 mt-2 pt-2 border-t border-white/10">
+                  <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-xs text-amber-400/80">{item.tip}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
 
-const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
+const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
   const [activeTab, setActiveTab] = useState('score');
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [shareStatus, setShareStatus] = useState(null);
+  const navigate = useNavigate();
 
   const handleShare = async () => {
-    setIsGeneratingImage(true);
-    setShareStatus(null);
-    
     const caption = LINKEDIN_CAPTION_TEMPLATE
       .replace('{score}', result.totalScore)
       .replace('{rank}', result.rank);
 
-    // Copy caption to clipboard first
     try {
       await navigator.clipboard.writeText(caption);
       setShareStatus('copied');
+      
+      const shareUrl = window.location.origin + '/play/greenshoe';
+      const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+      window.open(linkedInUrl, '_blank', 'width=600,height=600');
+      
+      setTimeout(() => setShareStatus(null), 3000);
     } catch (err) {
-      console.log('Clipboard failed');
+      console.error('Share failed:', err);
     }
+  };
 
-    // Try Web Share API (works on mobile)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Greenshoe Sprint - IB.GAMES',
-          text: caption,
-          url: window.location.origin + '/play/greenshoe'
-        });
-        setIsGeneratingImage(false);
-        return;
-      } catch (err) {
-        console.log('Web Share cancelled/failed, opening LinkedIn');
-      }
-    }
-
-    // Open LinkedIn share page
-    const shareUrl = window.location.origin + '/play/greenshoe';
-    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
-    window.open(linkedInUrl, '_blank', 'width=600,height=600,scrollbars=yes');
-    
-    if (onShare) onShare({ caption, method: 'linkedin' });
-    setIsGeneratingImage(false);
+  const handleHome = () => {
+    navigate('/');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a12] via-[#0d1020] to-[#0a0a12] px-4 py-6 overflow-y-auto">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      {/* Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center mb-4">
-          <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
-          <h1 className="text-xl font-bold text-white">Run Complete!</h1>
+        <div className="text-center mb-5">
+          <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
+          <h1 className="text-2xl font-bold text-white">Game Complete!</h1>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-1.5 mb-5 bg-white/5 rounded-lg p-1">
           {[
             { id: 'score', label: 'Score' },
-            { id: 'breakdown', label: 'What Happened' },
-            { id: 'learn', label: 'Learn' }
+            { id: 'analysis', label: 'Analysis' },
+            { id: 'learn', label: 'Learn More' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-all ${
+              className={`flex-1 py-2.5 px-3 rounded-md font-medium text-sm transition-all ${
                 activeTab === tab.id 
                   ? 'bg-white/10 text-white' 
                   : 'text-white/50 hover:text-white/70'
@@ -358,46 +301,22 @@ const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
           ))}
         </div>
 
-        {/* Score Tab */}
-        {activeTab === 'score' && (
-          <div className="space-y-4">
-            <ScoreCard result={result} />
+        {/* Tab Content */}
+        {activeTab === 'score' && <ScoreCard result={result} />}
+        
+        {activeTab === 'analysis' && <MetricAnalysis result={result} />}
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <div className="text-xl font-bold text-cyan-400">${result.finalPrice.toFixed(0)}</div>
-                <div className="text-xs text-white/50">Final Price</div>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <div className="text-xl font-bold text-emerald-400">{result.greenshoesUsed}/3</div>
-                <div className="text-xs text-white/50">Greenshoes</div>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 text-center">
-                <div className="text-xl font-bold text-amber-400">{result.budgetRemaining.toFixed(0)}%</div>
-                <div className="text-xs text-white/50">Budget Left</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Breakdown Tab */}
-        {activeTab === 'breakdown' && (
-          <PerformanceBreakdown result={result} />
-        )}
-
-        {/* Learn Tab */}
         {activeTab === 'learn' && (
           <div className="space-y-4">
-            <div className="bg-white/5 rounded-xl p-4">
-              <h3 className="flex items-center gap-2 text-white font-semibold mb-3">
+            <div className="bg-white/5 rounded-xl p-5">
+              <h3 className="flex items-center gap-2 text-white font-semibold mb-4">
                 <BookOpen className="w-5 h-5 text-cyan-400" />
-                Key Takeaways
+                Key Concepts You Practiced
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {LEARNING_BULLETS.map((bullet, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-white/70">
-                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                  <li key={i} className="flex items-start gap-3 text-sm text-white/70">
+                    <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                       {i + 1}
                     </span>
                     {bullet}
@@ -408,15 +327,15 @@ const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
 
             <button
               onClick={onLearnMore}
-              className="w-full bg-gradient-to-r from-white/5 to-white/10 hover:from-white/10 hover:to-white/15 rounded-xl p-4 text-left transition-all group"
+              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-5 text-left transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-white/50 text-xs font-mono mb-1">REAL WORLD STORY</div>
-                  <div className="text-white font-semibold">Alibaba's $25B IPO</div>
-                  <div className="text-white/50 text-sm">See this in action</div>
+                  <div className="text-white/50 text-xs font-mono mb-1">REAL WORLD EXAMPLE</div>
+                  <div className="text-white font-semibold">Alibaba's $25B IPO (2014)</div>
+                  <div className="text-white/50 text-sm">See the greenshoe option in action</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 group-hover:translate-x-1 transition-all" />
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition-all" />
               </div>
             </button>
           </div>
@@ -424,26 +343,35 @@ const ResultsScreen = ({ result, onReplay, onShare, onLearnMore }) => {
 
         {/* Actions */}
         <div className="mt-6 space-y-3">
-          <Button
-            onClick={handleShare}
-            disabled={isGeneratingImage}
-            className="w-full h-12 bg-[#0077b5] hover:bg-[#006097] text-white font-semibold"
-          >
-            <Share2 className="w-5 h-5 mr-2" />
-            {isGeneratingImage ? 'Preparing...' : 'Share on LinkedIn'}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={handleShare}
+              className="h-12 bg-[#0077b5] hover:bg-[#006097] text-white font-medium"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            <Button
+              onClick={onReplay}
+              variant="outline"
+              className="h-12 border-white/20 text-white hover:bg-white/5"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Replay
+            </Button>
+          </div>
           
           {shareStatus === 'copied' && (
-            <div className="text-center text-emerald-400 text-sm">✓ Caption copied! Paste it in LinkedIn.</div>
+            <div className="text-center text-emerald-400 text-sm">✓ Caption copied to clipboard!</div>
           )}
           
           <Button
-            variant="outline"
-            onClick={onReplay}
-            className="w-full h-12 border-white/20 text-white hover:bg-white/5"
+            onClick={handleHome}
+            variant="ghost"
+            className="w-full h-12 text-white/50 hover:text-white hover:bg-white/5"
           >
-            <RefreshCw className="w-5 h-5 mr-2" />
-            Play Again
+            <Home className="w-4 h-4 mr-2" />
+            Back to IB.GAMES
           </Button>
         </div>
       </div>
