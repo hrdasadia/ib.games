@@ -655,52 +655,94 @@ class GreenshoeGameScene extends Phaser.Scene {
     
     // Check resource availability
     let canPerformAction = true;
+    let resourceError = null;
     if (action === 'demand' && this.gameState.stabilizationBudget < 15) {
       canPerformAction = false;
+      resourceError = 'budget';
     }
     if (action === 'supply' && this.gameState.greenshoesRemaining <= 0) {
       canPerformAction = false;
+      resourceError = 'greenshoe';
     }
     
-    // Calculate price impact
-    let priceChange = scenario.priceMove;
+    // Calculate price impact based on decision accuracy
+    // Base price move from scenario
+    let finalPriceChange = 0;
+    let decisionResult = '';
     
-    if (canPerformAction) {
-      if (isCorrect) {
-        // Correct action - mitigate the move and bonus
-        priceChange = priceChange * 0.2; // 80% mitigation
-        this.gameState.correctDecisions++;
-        
-        if (action === 'demand') {
-          this.gameState.stabilizationBudget -= 15;
-        } else if (action === 'supply') {
-          this.gameState.greenshoesRemaining--;
-          this.updateGreenshoeDisplay();
-        }
-      } else if (action !== 'nothing') {
-        // Wrong intervention - makes it worse!
-        priceChange = priceChange * 1.5 + (scenario.wrongPenalty * (priceChange > 0 ? 1 : -1));
-        
-        if (action === 'demand') {
-          this.gameState.stabilizationBudget -= 15;
-        } else if (action === 'supply') {
-          this.gameState.greenshoesRemaining--;
-          this.updateGreenshoeDisplay();
-        }
+    if (!canPerformAction) {
+      // Can't perform action - price moves naturally
+      finalPriceChange = scenario.priceMove;
+      decisionResult = 'no_resource';
+    } else if (isCorrect) {
+      // CORRECT DECISION
+      this.gameState.correctDecisions++;
+      
+      if (action === 'demand') {
+        // Correctly bought support during falling price
+        // Price recovers significantly (mitigates 85% of the drop)
+        finalPriceChange = scenario.priceMove * 0.15;
+        this.gameState.stabilizationBudget -= 15;
+        decisionResult = 'correct_demand';
+      } else if (action === 'supply') {
+        // Correctly added supply during rising price  
+        // Price cools down significantly (mitigates 85% of the rise)
+        finalPriceChange = scenario.priceMove * 0.15;
+        this.gameState.greenshoesRemaining--;
+        this.updateGreenshoeDisplay();
+        decisionResult = 'correct_supply';
       } else {
-        // Did nothing when should have acted
-        priceChange = priceChange * 1.2;
+        // Correctly did nothing during stable market
+        // Price stays stable (small natural movement)
+        finalPriceChange = scenario.priceMove;
+        decisionResult = 'correct_nothing';
       }
     } else {
-      // Couldn't perform action
-      priceChange = priceChange * 1.3;
+      // WRONG DECISION
+      if (action === 'demand' && scenario.type === 'rising') {
+        // Wrong: Bought support when price was rising
+        // This adds MORE demand, pushing price even higher!
+        finalPriceChange = scenario.priceMove * 1.6 + 3;
+        this.gameState.stabilizationBudget -= 15;
+        decisionResult = 'wrong_demand_rising';
+      } else if (action === 'demand' && scenario.type === 'stable') {
+        // Wrong: Bought support when market was stable
+        // Wastes budget, slight upward price push
+        finalPriceChange = scenario.priceMove + 2;
+        this.gameState.stabilizationBudget -= 15;
+        decisionResult = 'wrong_demand_stable';
+      } else if (action === 'supply' && scenario.type === 'falling') {
+        // Wrong: Added supply when price was falling
+        // This adds MORE supply, crashing the price further!
+        finalPriceChange = scenario.priceMove * 1.6 - 3;
+        this.gameState.greenshoesRemaining--;
+        this.updateGreenshoeDisplay();
+        decisionResult = 'wrong_supply_falling';
+      } else if (action === 'supply' && scenario.type === 'stable') {
+        // Wrong: Added supply when market was stable
+        // Wastes greenshoe, slight downward price push
+        finalPriceChange = scenario.priceMove - 2;
+        this.gameState.greenshoesRemaining--;
+        this.updateGreenshoeDisplay();
+        decisionResult = 'wrong_supply_stable';
+      } else if (action === 'nothing' && scenario.type === 'rising') {
+        // Wrong: Did nothing when price was rising
+        // Price rises unchecked
+        finalPriceChange = scenario.priceMove * 1.1;
+        decisionResult = 'wrong_nothing_rising';
+      } else if (action === 'nothing' && scenario.type === 'falling') {
+        // Wrong: Did nothing when price was falling
+        // Price falls unchecked
+        finalPriceChange = scenario.priceMove * 1.1;
+        decisionResult = 'wrong_nothing_falling';
+      }
     }
     
     this.gameState.totalDecisions++;
     
     // Apply price change
     const oldPrice = this.gameState.price;
-    this.gameState.price = Math.max(85, Math.min(120, this.gameState.price * (1 + priceChange / 100)));
+    this.gameState.price = Math.max(82, Math.min(125, this.gameState.price * (1 + finalPriceChange / 100)));
     
     // Record in history
     this.gameState.priceHistory.push({
@@ -711,8 +753,8 @@ class GreenshoeGameScene extends Phaser.Scene {
     // Update score
     this.updateScore(isCorrect, Math.abs(this.gameState.price - 100));
     
-    // Show feedback
-    this.showFeedback(isCorrect, action, scenario, oldPrice, this.gameState.price, timedOut, canPerformAction);
+    // Show feedback with detailed result
+    this.showFeedback(isCorrect, action, scenario, oldPrice, this.gameState.price, timedOut, canPerformAction, decisionResult, resourceError);
   }
 
   showFeedback(isCorrect, action, scenario, oldPrice, newPrice, timedOut, canPerformAction) {
