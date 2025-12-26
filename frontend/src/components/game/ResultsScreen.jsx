@@ -264,6 +264,14 @@ const ResultsScreen = ({ result, onReplay, onLearnMore }) => {
   const [activeTab, setActiveTab] = useState('score');
   const [shareStatus, setShareStatus] = useState(null);
   const navigate = useNavigate();
+  
+  // Calculate max possible scores for progress bars
+  const MAX_SCORES = {
+      stability: 400,
+      liquidity: 200,
+      efficiency: 200,
+      reputation: 200
+  };
 
   React.useEffect(() => {
     if (result.totalScore >= 700) {

@@ -991,27 +991,47 @@ class GreenshoeGameScene extends Phaser.Scene {
   updateScore(isCorrect, priceDeviation) {
     // Score incrementally per round (12 rounds total)
     // Max scores: Stability=400, Liquidity=200, Efficiency=200, Reputation=200
+    // Total potential = 1000
     
     if (isCorrect) {
-      // Correct decisions boost efficiency (max ~16.7 per round for 12 rounds = 200)
-      this.gameState.score.efficiency = Math.min(200, this.gameState.score.efficiency + 16);
+      // Correct decisions boost efficiency 
+      // Need ~17 pts/round to reach 200 (17 * 12 = 204)
+      this.gameState.score.efficiency = Math.min(200, this.gameState.score.efficiency + 17);
     }
     
     // Stability based on price deviation (closer to $100 = better)
-    // Max ~33 per round for 12 rounds = 400
-    const stabilityGain = Math.max(0, 33 - priceDeviation * 6);
+    // Need ~34 pts/round to reach 400 (34 * 12 = 408)
+    // Penalty is higher for deviation
+    const stabilityGain = Math.max(0, 34 - priceDeviation * 5);
     this.gameState.score.stability = Math.min(400, this.gameState.score.stability + stabilityGain);
     
-    // Liquidity grows steadily each round (max ~16.7 per round = 200)
-    this.gameState.score.liquidity = Math.min(200, this.gameState.score.liquidity + 16);
+    // Liquidity: Market confidence based on available resources and price stability
+    // If you have budget/greenshoes and price isn't crazy, liquidity is good.
+    // If you're out of resources or price is crashing/spiking, liquidity dries up.
+    let liquidityGain = 0;
+    const hasResources = this.gameState.stabilizationBudget > 10 || this.gameState.greenshoesRemaining > 0;
+    const isStable = priceDeviation < 15;
+    
+    if (hasResources && isStable) {
+        liquidityGain = 17; // On track for 200
+    } else if (hasResources || isStable) {
+        liquidityGain = 8;  // Partial credit
+    }
+    this.gameState.score.liquidity = Math.min(200, this.gameState.score.liquidity + liquidityGain);
     
     // Reputation based on making good decisions and low volatility
+    // Need ~17 pts/round to reach 200
     if (isCorrect) {
-       if (priceDeviation < 3) {
-          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 14);
-       } else if (priceDeviation < 5) {
-          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 8);
+       if (priceDeviation < 5) {
+          // Excellent management
+          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 17);
+       } else if (priceDeviation < 10) {
+          // Good management but some volatility
+          this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 10);
        }
+    } else {
+        // Wrong decision penalty
+        this.gameState.score.reputation = Math.max(0, this.gameState.score.reputation - 5);
     }
   }
 
