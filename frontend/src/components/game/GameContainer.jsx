@@ -943,16 +943,28 @@ class GreenshoeGameScene extends Phaser.Scene {
   }
 
   updateScore(isCorrect, priceDeviation) {
+    // Score incrementally per round (12 rounds total)
+    // Max scores: Stability=400, Liquidity=200, Efficiency=200, Reputation=200
+    
     if (isCorrect) {
-      this.gameState.score.stability += 30;
-      this.gameState.score.efficiency += 15;
+      // Correct decisions boost efficiency (max ~16.7 per round for 12 rounds = 200)
+      this.gameState.score.efficiency = Math.min(200, this.gameState.score.efficiency + 16);
     }
     
-    if (priceDeviation < 3) {
-      this.gameState.score.reputation += 10;
-    }
+    // Stability based on price deviation (closer to $100 = better)
+    // Max ~33 per round for 12 rounds = 400
+    const stabilityGain = Math.max(0, 33 - priceDeviation * 6);
+    this.gameState.score.stability = Math.min(400, this.gameState.score.stability + stabilityGain);
     
-    this.gameState.score.liquidity += 12;
+    // Liquidity grows steadily each round (max ~16.7 per round = 200)
+    this.gameState.score.liquidity = Math.min(200, this.gameState.score.liquidity + 16);
+    
+    // Reputation based on making good decisions and low volatility
+    if (isCorrect && priceDeviation < 5) {
+      this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 14);
+    } else if (priceDeviation < 3) {
+      this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 8);
+    }
   }
 
   drawChart() {
