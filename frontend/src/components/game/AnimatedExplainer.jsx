@@ -1,192 +1,213 @@
 import React, { useState, useEffect } from 'react';
-import { Play, ChevronRight, SkipForward } from 'lucide-react';
+import { Play, ChevronRight, ChevronLeft, SkipForward } from 'lucide-react';
 import { Button } from '../ui/button';
 
 const AnimatedExplainer = ({ onComplete, onSkip }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(true);
 
   const steps = [
     {
-      title: "A Company Goes Public",
-      description: "Today, a tech company is launching its IPO — selling shares to the public for the first time at $100 per share.",
-      visual: "ipo",
-      duration: 4000
+      title: "Welcome to Greenshoe Sprint",
+      description: "You're the lead underwriter for a company going public (IPO). Your job: keep the stock price stable at $100.",
+      visual: "intro",
+      icon: "🏦"
     },
     {
-      title: "The Problem",
-      description: "On day one, the stock price can swing wildly. If it crashes, investors lose money. If it spikes too high, regulators get suspicious.",
-      visual: "volatility",
-      duration: 4500
+      title: "The Challenge",
+      description: "On IPO day, the stock price can swing wildly. If it crashes, investors lose money. If it spikes too high, it looks like you priced it wrong.",
+      visual: "challenge",
+      icon: "📊"
     },
     {
-      title: "You're the Stabilizer",
-      description: "As the lead underwriter, you have two powerful tools to keep the price stable around $100.",
-      visual: "role",
-      duration: 3500
+      title: "How to Play",
+      description: "You'll face 12 market scenarios. Each round, you have 5 seconds to choose one of three actions based on what's happening to the price.",
+      visual: "howto",
+      icon: "🎮"
     },
     {
-      title: "Tool #1: Buy Support",
-      description: "HOLD the screen to buy shares when the price drops. This creates demand and pushes the price back up. But you have limited budget.",
-      visual: "stabilize",
-      duration: 4500
+      title: "When Price is FALLING 📉",
+      description: "Choose ADD DEMAND (🛡️). This means you're buying shares to create demand and push the price back up. Uses your stabilization budget.",
+      visual: "falling",
+      icon: "🛡️"
     },
     {
-      title: "Tool #2: Greenshoe Option",
-      description: "TAP to release extra shares when demand is too hot. This increases supply and cools down an overheating price. You have 3 uses.",
+      title: "When Price is RISING 📈",
+      description: "Choose ADD SUPPLY (📈). This activates the GREENSHOE OPTION — releasing extra shares to increase supply and cool down the price. You have 3 uses.",
+      visual: "rising",
+      icon: "📈"
+    },
+    {
+      title: "What is a Greenshoe Option?",
+      description: "A greenshoe (or 'overallotment option') lets underwriters sell up to 15% more shares than planned. It's named after Green Shoe Manufacturing Co., the first company to use it in 1963.",
       visual: "greenshoe",
-      duration: 4500
+      icon: "👟"
     },
     {
-      title: "The Order Book",
-      description: "Different investors react differently. Retail = regular people. Long-Only = patient funds. Hedge = fast traders. Momentum = trend followers.",
-      visual: "orderbook",
-      duration: 5000
+      title: "When Price is STABLE ⚖️",
+      description: "Choose DO NOTHING (⏸️). If the market is balanced, intervening wastes your limited resources. Sometimes the best move is no move!",
+      visual: "stable",
+      icon: "⏸️"
     },
     {
-      title: "Your Goal",
-      description: "Keep the price stable near $100 for 90 seconds across 3 market phases. Use your tools wisely!",
-      visual: "goal",
-      duration: 3500
+      title: "Scoring",
+      description: "Correct decisions stabilize the price. Wrong decisions make things worse! Your final score depends on decision accuracy and how close the price stays to $100.",
+      visual: "scoring",
+      icon: "🏆"
     }
   ];
 
-  useEffect(() => {
-    if (!isAnimating) return;
-    
-    const timer = setTimeout(() => {
-      if (currentStep < steps.length - 1) {
-        setCurrentStep(prev => prev + 1);
-      } else {
-        setIsAnimating(false);
-      }
-    }, steps[currentStep].duration);
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    } else {
+      onComplete();
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, [currentStep, isAnimating, steps]);
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
 
   const step = steps[currentStep];
 
   const renderVisual = (type) => {
     switch (type) {
-      case 'ipo':
+      case 'intro':
         return (
-          <div className="relative w-48 h-48">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center animate-pulse shadow-lg shadow-cyan-500/30">
-                <span className="text-white text-3xl font-bold">$100</span>
+          <div className="flex flex-col items-center">
+            <div className="text-6xl mb-4">🏦</div>
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500/30 to-emerald-500/30 flex items-center justify-center border border-cyan-500/50">
+                <span className="text-2xl font-bold text-cyan-400">$100</span>
               </div>
+              <span className="text-white/50">Target Price</span>
             </div>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-12 bg-gradient-to-b from-cyan-400 to-transparent" />
-            <svg className="absolute inset-0 w-full h-full animate-spin-slow" style={{animationDuration: '8s'}}>
-              <circle cx="96" cy="96" r="80" fill="none" stroke="rgba(0,255,170,0.2)" strokeWidth="2" strokeDasharray="10 5" />
-            </svg>
           </div>
         );
       
-      case 'volatility':
+      case 'challenge':
         return (
-          <div className="w-64 h-32 relative">
-            <svg viewBox="0 0 200 80" className="w-full h-full">
+          <div className="w-64 h-24 relative">
+            <svg viewBox="0 0 200 60" className="w-full h-full">
               <path
-                d="M0,40 L20,35 L40,55 L60,20 L80,60 L100,25 L120,50 L140,15 L160,55 L180,30 L200,45"
+                d="M0,30 L20,35 L40,15 L60,45 L80,20 L100,40 L120,25 L140,50 L160,20 L180,35 L200,30"
                 fill="none"
-                stroke="#ff4444"
+                stroke="#ff6644"
                 strokeWidth="3"
-                className="animate-draw"
               />
-              <line x1="0" y1="40" x2="200" y2="40" stroke="rgba(255,255,255,0.2)" strokeDasharray="5 5" />
-              <text x="100" y="75" textAnchor="middle" fill="#888" fontSize="10">Wild swings = Bad</text>
+              <line x1="0" y1="30" x2="200" y2="30" stroke="rgba(0,255,170,0.3)" strokeDasharray="5 5" />
+              <text x="100" y="58" textAnchor="middle" fill="#666" fontSize="10">Wild price swings = Bad</text>
             </svg>
           </div>
         );
       
-      case 'role':
-        return (
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
-              <span className="text-2xl">👔</span>
-            </div>
-            <div className="text-left">
-              <div className="text-white font-bold">Lead Underwriter</div>
-              <div className="text-white/50 text-sm">Price Stabilization Expert</div>
-            </div>
-          </div>
-        );
-      
-      case 'stabilize':
+      case 'howto':
         return (
           <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-blue-500/20 border-4 border-blue-400 flex items-center justify-center animate-pulse">
-                <span className="text-blue-400 text-sm font-bold">HOLD</span>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl">12</div>
+              <span className="text-white/70">Rounds</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl">5s</div>
+              <span className="text-white/70">Per Decision</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl">3</div>
+              <span className="text-white/70">Choices Each Round</span>
+            </div>
+          </div>
+        );
+      
+      case 'falling':
+        return (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4">
+              <div className="text-3xl text-red-400">📉</div>
+              <div className="text-2xl">→</div>
+              <div className="w-20 h-20 rounded-xl bg-blue-500/20 border-2 border-blue-500 flex flex-col items-center justify-center">
+                <span className="text-2xl">🛡️</span>
+                <span className="text-xs text-blue-400 mt-1">ADD DEMAND</span>
               </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-blue-500 rounded text-xs text-white">Buy Support</div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-red-400">$95</span>
-              <span className="text-white">→</span>
-              <span className="text-green-400">$100</span>
+            <div className="text-sm text-white/50">Buy shares to push price UP</div>
+          </div>
+        );
+      
+      case 'rising':
+        return (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4">
+              <div className="text-3xl text-orange-400">📈</div>
+              <div className="text-2xl">→</div>
+              <div className="w-20 h-20 rounded-xl bg-emerald-500/20 border-2 border-emerald-500 flex flex-col items-center justify-center">
+                <span className="text-2xl">📈</span>
+                <span className="text-xs text-emerald-400 mt-1">ADD SUPPLY</span>
+              </div>
             </div>
+            <div className="text-sm text-white/50">Release shares to push price DOWN</div>
           </div>
         );
       
       case 'greenshoe':
         return (
           <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-4 border-emerald-400 flex items-center justify-center">
-                <span className="text-emerald-400 text-sm font-bold">TAP</span>
+            <div className="text-5xl">👟</div>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 max-w-xs">
+              <div className="text-emerald-400 font-bold text-sm mb-1">Greenshoe Option</div>
+              <div className="text-white/60 text-xs leading-relaxed">
+                Allows underwriters to sell up to ~15% extra shares if demand is high. Creates a "buffer" to stabilize wild price swings.
               </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-emerald-500 rounded text-xs text-white">Add Supply</div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-red-400">$115</span>
-              <span className="text-white">→</span>
-              <span className="text-green-400">$100</span>
-            </div>
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               {[1,2,3].map(i => (
-                <div key={i} className="w-3 h-3 rounded-full bg-emerald-400" />
-              ))}
-              <span className="text-white/50 text-xs ml-2">× 3 uses</span>
-            </div>
-          </div>
-        );
-      
-      case 'orderbook':
-        return (
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              { name: 'Retail', color: 'bg-blue-500', desc: 'Regular investors' },
-              { name: 'Long-Only', color: 'bg-emerald-500', desc: 'Patient funds' },
-              { name: 'Hedge', color: 'bg-amber-500', desc: 'Fast traders' },
-              { name: 'Momentum', color: 'bg-pink-500', desc: 'Trend followers' }
-            ].map(item => (
-              <div key={item.name} className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                <div className={`w-3 h-8 rounded ${item.color}`} />
-                <div>
-                  <div className="text-white font-medium text-xs">{item.name}</div>
-                  <div className="text-white/40 text-xs">{item.desc}</div>
+                <div key={i} className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold">
+                  {i}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="text-xs text-white/40">You have 3 greenshoe uses</div>
           </div>
         );
       
-      case 'goal':
+      case 'stable':
         return (
-          <div className="text-center">
-            <div className="text-6xl font-bold text-white mb-2">$100</div>
-            <div className="w-48 h-2 bg-white/10 rounded-full mx-auto mb-4 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 w-3/4 rounded-full" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4">
+              <div className="text-3xl text-gray-400">⚖️</div>
+              <div className="text-2xl">→</div>
+              <div className="w-20 h-20 rounded-xl bg-gray-500/20 border-2 border-gray-500 flex flex-col items-center justify-center">
+                <span className="text-2xl">⏸️</span>
+                <span className="text-xs text-gray-400 mt-1">DO NOTHING</span>
+              </div>
             </div>
-            <div className="text-white/50">Keep it stable for 90 seconds</div>
+            <div className="text-sm text-white/50">Save resources for when you need them!</div>
+          </div>
+        );
+      
+      case 'scoring':
+        return (
+          <div className="flex flex-col items-center gap-3">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+                <div className="text-emerald-400 font-bold">✓ Correct</div>
+                <div className="text-white/50 text-xs mt-1">Price stabilizes</div>
+              </div>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
+                <div className="text-red-400 font-bold">✗ Wrong</div>
+                <div className="text-white/50 text-xs mt-1">Price gets worse</div>
+              </div>
+            </div>
+            <div className="text-white/40 text-xs mt-2">
+              Goal: Keep price close to $100 with high accuracy
+            </div>
           </div>
         );
       
       default:
-        return null;
+        return <div className="text-6xl">{step.icon}</div>;
     }
   };
 
@@ -211,63 +232,74 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 pt-12">
         {/* Step indicator */}
-        <div className="text-cyan-400/50 text-xs font-mono mb-8">
+        <div className="text-cyan-400/50 text-xs font-mono mb-6">
           {currentStep + 1} / {steps.length}
         </div>
 
         {/* Visual */}
-        <div className="mb-8 h-48 flex items-center justify-center">
+        <div className="mb-8 h-40 flex items-center justify-center">
           {renderVisual(step.visual)}
         </div>
 
         {/* Title */}
-        <h2 className="text-2xl font-bold text-white text-center mb-4 animate-fade-in" key={`title-${currentStep}`}>
+        <h2 className="text-xl font-bold text-white text-center mb-4">
           {step.title}
         </h2>
 
         {/* Description */}
-        <p className="text-white/70 text-center text-lg leading-relaxed max-w-sm animate-fade-in" key={`desc-${currentStep}`}>
+        <p className="text-white/70 text-center text-base leading-relaxed max-w-sm mb-6">
           {step.description}
         </p>
+
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-6">
+          {steps.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentStep 
+                  ? 'bg-cyan-400 w-6' 
+                  : i < currentStep 
+                    ? 'bg-cyan-400/50 w-1.5' 
+                    : 'bg-white/20 w-1.5'
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Navigation */}
-      <div className="p-6">
-        {!isAnimating ? (
+      <div className="p-6 pt-0">
+        <div className="flex gap-3">
           <Button
-            onClick={onComplete}
-            size="lg"
-            className="w-full h-14 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white font-bold text-lg shadow-lg shadow-cyan-500/25"
+            variant="ghost"
+            onClick={handlePrev}
+            disabled={currentStep === 0}
+            className="flex-1 h-12 text-white/50 hover:text-white disabled:opacity-30"
           >
-            <Play className="w-5 h-5 mr-2 fill-current" />
-            Start Playing
+            <ChevronLeft className="w-5 h-5 mr-1" />
+            Back
           </Button>
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => currentStep > 0 && setCurrentStep(prev => prev - 1)}
-              disabled={currentStep === 0}
-              className="flex-1 h-12 text-white/50 hover:text-white disabled:opacity-30"
-            >
-              Back
-            </Button>
-            <Button
-              onClick={() => {
-                if (currentStep < steps.length - 1) {
-                  setCurrentStep(prev => prev + 1);
-                } else {
-                  setIsAnimating(false);
-                }
-              }}
-              className="flex-1 h-12 bg-white/10 hover:bg-white/20 text-white"
-            >
-              Next <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-        )}
+          
+          <Button
+            onClick={handleNext}
+            className="flex-1 h-12 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white font-semibold"
+          >
+            {currentStep === steps.length - 1 ? (
+              <>
+                <Play className="w-5 h-5 mr-2 fill-current" />
+                Start Game
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="w-5 h-5 ml-1" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
