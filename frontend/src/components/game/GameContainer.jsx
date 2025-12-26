@@ -757,60 +757,124 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.showFeedback(isCorrect, action, scenario, oldPrice, this.gameState.price, timedOut, canPerformAction, decisionResult, resourceError);
   }
 
-  showFeedback(isCorrect, action, scenario, oldPrice, newPrice, timedOut, canPerformAction) {
+  showFeedback(isCorrect, action, scenario, oldPrice, newPrice, timedOut, canPerformAction, decisionResult, resourceError) {
     this.feedbackContainer.setVisible(true);
     
-    if (!canPerformAction) {
-      this.feedbackIcon.setText('🚫');
-      this.feedbackTitle.setText('NO RESOURCES!');
-      this.feedbackTitle.setColor('#ff8800');
-      this.feedbackDesc.setText(`Can't ${action === 'demand' ? 'stabilize - no budget' : 'add supply - no greenshoes'}`);
-    } else if (timedOut) {
-      this.feedbackIcon.setText('⏰');
-      this.feedbackTitle.setText('TIME UP!');
-      this.feedbackTitle.setColor('#ff8800');
-      this.feedbackDesc.setText(isCorrect ? 'Doing nothing was correct!' : 'You should have acted!');
-    } else if (isCorrect) {
-      this.feedbackIcon.setText('✓');
-      this.feedbackTitle.setText('CORRECT!');
-      this.feedbackTitle.setColor('#00ff88');
-      
-      const actionDescs = {
-        demand: 'Buy support stabilized the price!',
-        supply: 'Extra shares cooled the demand!',
-        nothing: 'Smart to let the market settle!'
-      };
-      this.feedbackDesc.setText(actionDescs[action]);
-      
-      if (this.callbacks.audioManager) {
-        this.callbacks.audioManager.playGreenshoe();
+    // Detailed feedback based on decision result
+    const feedbackMessages = {
+      // Correct decisions
+      'correct_demand': {
+        icon: '✓',
+        title: 'GREAT CALL!',
+        color: '#00ff88',
+        desc: 'Your buy support absorbed the selling pressure and stabilized the price!'
+      },
+      'correct_supply': {
+        icon: '✓', 
+        title: 'PERFECT TIMING!',
+        color: '#00ff88',
+        desc: 'The greenshoe released extra shares and cooled the overheating demand!'
+      },
+      'correct_nothing': {
+        icon: '✓',
+        title: 'SMART MOVE!',
+        color: '#00ff88', 
+        desc: 'The market was balanced — no intervention needed. Resources saved!'
+      },
+      // Wrong decisions
+      'wrong_demand_rising': {
+        icon: '✗',
+        title: 'WRONG MOVE!',
+        color: '#ff4444',
+        desc: 'You added MORE demand when price was already rising! It spiked even higher.'
+      },
+      'wrong_demand_stable': {
+        icon: '✗',
+        title: 'WASTED BUDGET!',
+        color: '#ff8844',
+        desc: 'Market was stable — buying support was unnecessary and pushed price up.'
+      },
+      'wrong_supply_falling': {
+        icon: '✗',
+        title: 'WRONG MOVE!',
+        color: '#ff4444',
+        desc: 'You added MORE supply when price was already falling! It crashed further.'
+      },
+      'wrong_supply_stable': {
+        icon: '✗',
+        title: 'WASTED GREENSHOE!',
+        color: '#ff8844',
+        desc: 'Market was stable — adding supply was unnecessary and pushed price down.'
+      },
+      'wrong_nothing_rising': {
+        icon: '✗',
+        title: 'SHOULD HAVE ACTED!',
+        color: '#ff6644',
+        desc: 'Price was spiking — you should have used a greenshoe to add supply!'
+      },
+      'wrong_nothing_falling': {
+        icon: '✗',
+        title: 'SHOULD HAVE ACTED!',
+        color: '#ff6644',
+        desc: 'Price was dropping — you should have bought support to add demand!'
+      },
+      'no_resource': {
+        icon: '🚫',
+        title: 'NO RESOURCES!',
+        color: '#ff8800',
+        desc: resourceError === 'budget' ? 'Out of stabilization budget!' : 'No greenshoes remaining!'
       }
-    } else {
-      this.feedbackIcon.setText('✗');
-      this.feedbackTitle.setText('WRONG MOVE!');
-      this.feedbackTitle.setColor('#ff4444');
-      
-      const wrongDescs = {
-        demand: `Buying when price was ${scenario.type === 'rising' ? 'rising pushed it higher!' : 'stable wasted budget!'}`,
-        supply: `Adding supply when price was ${scenario.type === 'falling' ? 'falling made it crash!' : 'stable wasted a greenshoe!'}`,
-        nothing: `Should have ${scenario.correctAction === 'demand' ? 'bought support!' : 'added supply!'}`
-      };
-      this.feedbackDesc.setText(wrongDescs[action]);
-      
-      if (this.callbacks.audioManager) {
-        this.callbacks.audioManager.playNegativeNews();
+    };
+    
+    const feedback = feedbackMessages[decisionResult] || {
+      icon: '?',
+      title: 'UNKNOWN',
+      color: '#888888',
+      desc: 'Something unexpected happened.'
+    };
+    
+    // Handle timeout special case
+    if (timedOut) {
+      if (isCorrect) {
+        feedback.icon = '⏰';
+        feedback.title = 'TIME UP - But OK!';
+        feedback.color = '#88ff88';
+        feedback.desc = 'You ran out of time, but doing nothing was the right call here!';
+      } else {
+        feedback.icon = '⏰';
+        feedback.title = 'TIME UP!';
+        feedback.color = '#ff8844';
       }
-      
-      // Screen shake for wrong answer
-      this.cameras.main.shake(300, 0.01);
     }
     
-    // Show price change
+    this.feedbackIcon.setText(feedback.icon);
+    this.feedbackTitle.setText(feedback.title);
+    this.feedbackTitle.setColor(feedback.color);
+    this.feedbackDesc.setText(feedback.desc);
+    
+    // Show price change with clear direction
     const change = newPrice - oldPrice;
+    const changeText = change >= 0 ? `+$${change.toFixed(2)}` : `-$${Math.abs(change).toFixed(2)}`;
+    const isCloserToTarget = Math.abs(newPrice - 100) < Math.abs(oldPrice - 100);
+    
     this.feedbackPriceChange.setText(
-      `$${oldPrice.toFixed(2)} → $${newPrice.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)})`
+      `$${oldPrice.toFixed(2)} → $${newPrice.toFixed(2)} (${changeText})`
     );
-    this.feedbackPriceChange.setColor(Math.abs(newPrice - 100) < Math.abs(oldPrice - 100) ? '#00ff88' : '#ff4444');
+    this.feedbackPriceChange.setColor(isCloserToTarget ? '#00ff88' : '#ff4444');
+    
+    // Play appropriate sound
+    if (this.callbacks.audioManager) {
+      if (isCorrect) {
+        this.callbacks.audioManager.playGreenshoe();
+      } else {
+        this.callbacks.audioManager.playNegativeNews();
+      }
+    }
+    
+    // Screen shake for wrong answers
+    if (!isCorrect && decisionResult !== 'no_resource') {
+      this.cameras.main.shake(300, 0.012);
+    }
     
     // Update displays
     this.updatePriceDisplay();
@@ -828,11 +892,11 @@ class GreenshoeGameScene extends Phaser.Scene {
     });
     
     // Hide feedback and continue
-    this.time.delayedCall(2000, () => {
+    this.time.delayedCall(2500, () => {
       this.feedbackContainer.setVisible(false);
       this.scenarioContainer.setVisible(false);
       this.priceChangeText.setText('');
-      this.time.delayedCall(500, () => this.startNextRound());
+      this.time.delayedCall(600, () => this.startNextRound());
     });
   }
 
