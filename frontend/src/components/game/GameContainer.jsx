@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Phaser from 'phaser';
 import { audioManager } from '../../game/AudioManager';
 
-// Enhanced Game Scene with improved mobile touch and reduced volatility
+// REDESIGNED: Decision-based gameplay with clear 3-5 second decision windows
 class GreenshoeGameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'GreenshoeGameScene' });
@@ -17,68 +17,41 @@ class GreenshoeGameScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#0a0a12');
     
-    // Initialize game state - REDUCED VOLATILITY for better player reaction
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+    
+    // Initialize game state
     this.gameState = {
       phase: 0,
-      totalTime: 0,
+      roundNumber: 0,
+      totalRounds: 12, // 12 decision rounds total
       price: 100,
       targetPrice: 100,
-      volatility: 0.025, // Reduced from 0.05
       stabilizationBudget: 100,
       greenshoesRemaining: 3,
-      isStabilizing: false,
       priceHistory: [{ time: 0, price: 100 }],
       gameOver: false,
-      budgetUsed: 0,
-      greenshoesUsed: 0,
-      maxVolatility: 0,
-      stabilizationTime: 0,
-      perfectGreenshoes: 0,
+      inDecisionMode: false,
+      decisionTimer: 0,
+      decisionTimeLimit: 4, // 4 seconds to decide
+      currentScenario: null,
       score: { stability: 0, liquidity: 0, efficiency: 0, reputation: 0 },
-      lastVolatilityWarning: 0
+      decisions: [], // Track all decisions made
+      correctDecisions: 0,
+      totalDecisions: 0
     };
 
-    this.pointerDownTime = 0;
-    this.isHolding = false;
-    this.holdIndicator = null;
-    this.tickCounter = 0;
-
+    // Create all UI elements
     this.createBackground();
-    this.createParticles();
-    this.createUI();
-    this.createPriceChart();
-    this.createOrderBook();
-    this.createHoldIndicator();
-    this.createTouchZones(); // New: explicit touch zones
-    this.setupInput();
+    this.createHeader();
+    this.createPriceDisplay();
+    this.createScenarioDisplay();
+    this.createDecisionButtons();
+    this.createResourceDisplay();
+    this.createFeedbackDisplay();
 
-    // Start ambient music
-    if (this.callbacks.audioManager) {
-      this.callbacks.audioManager.startAmbientMusic();
-    }
-
-    // Game timer - slower tick for smoother experience
-    this.gameTimer = this.time.addEvent({
-      delay: 150, // Increased from 100 for smoother feel
-      callback: this.gameLoop,
-      callbackScope: this,
-      loop: true
-    });
-
-    // Phase transitions
-    this.time.delayedCall(25000, () => this.transitionToPhase(1));
-    this.time.delayedCall(60000, () => this.transitionToPhase(2));
-    this.time.delayedCall(90000, () => this.endGame());
-
-    // Fewer random events for less chaos
-    for (let i = 0; i < 4; i++) { // Reduced from 6
-      this.time.delayedCall(12000 + i * 18000, () => {
-        if (!this.gameState.gameOver) this.triggerDemandSurge();
-      });
-    }
-
-    this.time.delayedCall(65000, () => this.triggerNewsEvent(true));
-    this.time.delayedCall(80000, () => this.triggerNewsEvent(false));
+    // Start the game flow
+    this.time.delayedCall(1500, () => this.startNextRound());
   }
 
   createBackground() {
@@ -89,754 +62,883 @@ class GreenshoeGameScene extends Phaser.Scene {
     const graphics = this.add.graphics();
     for (let y = 0; y < height; y++) {
       const t = y / height;
-      const r = Math.floor(10 + t * 5);
-      const g = Math.floor(10 + t * 15);
-      const b = Math.floor(18 + t * 20);
+      const r = Math.floor(8 + t * 8);
+      const g = Math.floor(10 + t * 12);
+      const b = Math.floor(20 + t * 15);
       graphics.lineStyle(1, Phaser.Display.Color.GetColor(r, g, b));
       graphics.lineBetween(0, y, width, y);
     }
     
-    // Animated grid
-    this.gridGraphics = this.add.graphics();
-    this.gridOffset = 0;
-  }
-
-  updateGrid() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-    
-    this.gridGraphics.clear();
-    this.gridOffset = (this.gridOffset + 0.2) % 30;
-    
-    const alpha = 0.12 + Math.sin(this.gameState.totalTime * 1.5) * 0.03;
-    this.gridGraphics.lineStyle(1, 0x1a3a5a, alpha);
-    
-    for (let x = -this.gridOffset; x < width; x += 30) {
-      this.gridGraphics.lineBetween(x, 0, x, height);
+    // Subtle grid
+    graphics.lineStyle(1, 0x1a2a4a, 0.2);
+    for (let x = 0; x < width; x += 40) {
+      graphics.lineBetween(x, 0, x, height);
     }
-    for (let y = 0; y < height; y += 30) {
-      this.gridGraphics.lineBetween(0, y, width, y);
+    for (let y = 0; y < height; y += 40) {
+      graphics.lineBetween(0, y, width, y);
     }
   }
 
-  createParticles() {
-    this.particles = [];
+  createHeader() {
     const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
     
-    for (let i = 0; i < 20; i++) {
-      const particle = this.add.circle(
-        Phaser.Math.Between(0, width),
-        Phaser.Math.Between(0, height),
-        Phaser.Math.Between(1, 3),
-        0x00ffaa,
-        0.35
-      );
-      particle.velocity = { 
-        x: Phaser.Math.FloatBetween(-0.2, 0.2), 
-        y: Phaser.Math.FloatBetween(-0.3, -0.1) 
-      };
-      particle.pulseSpeed = Phaser.Math.FloatBetween(0.015, 0.03);
-      particle.pulseOffset = Math.random() * Math.PI * 2;
-      this.particles.push(particle);
-    }
-  }
-
-  createUI() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-
-    // Phase text
-    this.phaseText = this.add.text(15, 15, 'PHASE 1: Bookbuilding', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#00aaff'
+    // Phase/Round indicator
+    this.phaseText = this.add.text(20, 20, 'ROUND 1 of 12', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#00aaff'
     });
-    this.phaseDescText = this.add.text(15, 34, 'Orders flowing in — manage allocation', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#888'
+    
+    this.phaseDescText = this.add.text(20, 40, 'Phase 1: Bookbuilding', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#666'
     });
+    
+    // Progress bar for rounds
+    this.progressBg = this.add.rectangle(width - 20, 30, 100, 8, 0x1a2a3a).setOrigin(1, 0.5);
+    this.progressFill = this.add.rectangle(width - 120, 30, 0, 8, 0x00aaff).setOrigin(0, 0.5);
+  }
 
-    // Timer
-    this.timerText = this.add.text(width - 15, 15, '90s', {
-      fontFamily: 'monospace', fontSize: '22px', fontStyle: 'bold', color: '#fff'
-    }).setOrigin(1, 0);
-
-    // Price display with glow
-    this.priceGlow = this.add.circle(width / 2, 65, 55, 0x00ffaa, 0.12);
-    this.priceText = this.add.text(width / 2, 60, '$100.00', {
-      fontFamily: 'monospace', fontSize: '30px', fontStyle: 'bold', color: '#00ffaa'
+  createPriceDisplay() {
+    const width = this.cameras.main.width;
+    
+    // Large price display
+    this.priceContainer = this.add.container(width / 2, 100);
+    
+    this.priceGlow = this.add.circle(0, 0, 70, 0x00ffaa, 0.15);
+    this.priceContainer.add(this.priceGlow);
+    
+    this.priceText = this.add.text(0, -10, '$100.00', {
+      fontFamily: 'monospace', fontSize: '36px', fontStyle: 'bold', color: '#00ffaa'
     }).setOrigin(0.5);
-    this.targetText = this.add.text(width / 2, 88, 'Target: $100', {
+    this.priceContainer.add(this.priceText);
+    
+    this.targetText = this.add.text(0, 25, 'Target: $100', {
       fontFamily: 'monospace', fontSize: '12px', color: '#666'
     }).setOrigin(0.5);
+    this.priceContainer.add(this.targetText);
+    
+    // Price change indicator
+    this.priceChangeText = this.add.text(0, 50, '', {
+      fontFamily: 'monospace', fontSize: '14px', fontStyle: 'bold', color: '#ffaa00'
+    }).setOrigin(0.5);
+    this.priceContainer.add(this.priceChangeText);
+    
+    // Mini price chart
+    this.chartGraphics = this.add.graphics();
+    this.chartX = 30;
+    this.chartY = 170;
+    this.chartWidth = width - 60;
+    this.chartHeight = 80;
+    
+    // Chart border
+    this.add.rectangle(this.chartX + this.chartWidth/2, this.chartY + this.chartHeight/2, 
+      this.chartWidth, this.chartHeight, 0x0a1520, 0.5);
+    this.add.rectangle(this.chartX + this.chartWidth/2, this.chartY + this.chartHeight/2, 
+      this.chartWidth, this.chartHeight).setStrokeStyle(1, 0x1a3a5a, 0.3);
+  }
 
-    // Budget section
-    this.budgetY = height - 120;
-    this.add.text(15, this.budgetY, 'STABILIZATION BUDGET', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#888'
-    });
-    this.budgetHintText = this.add.text(15, this.budgetY + 13, 'HOLD anywhere to buy support', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#00aaff'
-    });
-    this.budgetBarBg = this.add.rectangle(15, this.budgetY + 32, 150, 14, 0x1a2a3a).setOrigin(0, 0.5);
-    this.budgetBarFill = this.add.rectangle(15, this.budgetY + 32, 150, 14, 0x00aaff).setOrigin(0, 0.5);
-    this.budgetBarGlow = this.add.rectangle(15, this.budgetY + 32, 150, 14, 0x00aaff, 0).setOrigin(0, 0.5);
+  createScenarioDisplay() {
+    const width = this.cameras.main.width;
+    
+    // Scenario box - shows what's happening in the market
+    this.scenarioContainer = this.add.container(width / 2, 310);
+    
+    this.scenarioBg = this.add.rectangle(0, 0, width - 40, 100, 0x0a1520, 0.8)
+      .setStrokeStyle(2, 0x1a3a5a);
+    this.scenarioContainer.add(this.scenarioBg);
+    
+    this.scenarioIcon = this.add.text(0, -25, '📊', {
+      fontSize: '28px'
+    }).setOrigin(0.5);
+    this.scenarioContainer.add(this.scenarioIcon);
+    
+    this.scenarioTitle = this.add.text(0, 5, 'Market Update', {
+      fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#fff'
+    }).setOrigin(0.5);
+    this.scenarioContainer.add(this.scenarioTitle);
+    
+    this.scenarioDesc = this.add.text(0, 28, 'Waiting for market activity...', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#aaa', wordWrap: { width: width - 80 }
+    }).setOrigin(0.5);
+    this.scenarioContainer.add(this.scenarioDesc);
+    
+    // Decision timer bar
+    this.timerBarBg = this.add.rectangle(0, 55, width - 60, 6, 0x1a2a3a).setOrigin(0.5);
+    this.scenarioContainer.add(this.timerBarBg);
+    
+    this.timerBarFill = this.add.rectangle(-(width - 60)/2, 55, width - 60, 6, 0x00aaff).setOrigin(0, 0.5);
+    this.scenarioContainer.add(this.timerBarFill);
+    
+    this.timerText = this.add.text(0, 55, '', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#fff'
+    }).setOrigin(0.5);
+    this.scenarioContainer.add(this.timerText);
+    
+    this.scenarioContainer.setVisible(false);
+  }
 
-    // Greenshoe section
-    this.greenshoeY = height - 62;
-    this.add.text(15, this.greenshoeY, 'GREENSHOE OPTIONS', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#888'
+  createDecisionButtons() {
+    const width = this.cameras.main.width;
+    const buttonY = 440;
+    const buttonWidth = (width - 50) / 3;
+    const buttonHeight = 100;
+    
+    this.buttonsContainer = this.add.container(0, 0);
+    
+    // Button configurations
+    const buttons = [
+      { 
+        id: 'demand', 
+        label: 'ADD\nDEMAND', 
+        sublabel: 'Buy Support',
+        color: 0x0088ff, 
+        icon: '🛡️',
+        hint: 'Use when price\nis FALLING'
+      },
+      { 
+        id: 'nothing', 
+        label: 'DO\nNOTHING', 
+        sublabel: 'Let it ride',
+        color: 0x444444, 
+        icon: '⏸️',
+        hint: 'Use when price\nis STABLE'
+      },
+      { 
+        id: 'supply', 
+        label: 'ADD\nSUPPLY', 
+        sublabel: 'Greenshoe',
+        color: 0x00aa55, 
+        icon: '📈',
+        hint: 'Use when price\nis RISING'
+      }
+    ];
+    
+    this.decisionButtons = [];
+    
+    buttons.forEach((btn, i) => {
+      const x = 15 + i * (buttonWidth + 10) + buttonWidth / 2;
+      
+      // Button background
+      const bg = this.add.rectangle(x, buttonY, buttonWidth, buttonHeight, btn.color, 0.2)
+        .setStrokeStyle(2, btn.color, 0.6)
+        .setInteractive({ useHandCursor: true });
+      
+      // Glow effect (hidden by default)
+      const glow = this.add.rectangle(x, buttonY, buttonWidth + 10, buttonHeight + 10, btn.color, 0)
+        .setStrokeStyle(4, btn.color, 0);
+      
+      // Icon
+      const icon = this.add.text(x, buttonY - 28, btn.icon, {
+        fontSize: '24px'
+      }).setOrigin(0.5);
+      
+      // Label
+      const label = this.add.text(x, buttonY + 5, btn.label, {
+        fontFamily: 'monospace', fontSize: '12px', fontStyle: 'bold', color: '#fff',
+        align: 'center'
+      }).setOrigin(0.5);
+      
+      // Sublabel
+      const sublabel = this.add.text(x, buttonY + 35, btn.sublabel, {
+        fontFamily: 'monospace', fontSize: '9px', color: '#888'
+      }).setOrigin(0.5);
+      
+      // Hint text (when to use)
+      const hint = this.add.text(x, buttonY + 55, btn.hint, {
+        fontFamily: 'monospace', fontSize: '8px', color: '#555', align: 'center'
+      }).setOrigin(0.5);
+      
+      // Button interactions
+      bg.on('pointerover', () => {
+        if (this.gameState.inDecisionMode) {
+          bg.setFillStyle(btn.color, 0.4);
+          glow.setAlpha(0.3);
+        }
+      });
+      
+      bg.on('pointerout', () => {
+        bg.setFillStyle(btn.color, 0.2);
+        glow.setAlpha(0);
+      });
+      
+      bg.on('pointerdown', () => {
+        if (this.gameState.inDecisionMode) {
+          this.makeDecision(btn.id);
+        }
+      });
+      
+      this.buttonsContainer.add([glow, bg, icon, label, sublabel, hint]);
+      this.decisionButtons.push({ bg, glow, icon, label, id: btn.id, color: btn.color });
     });
-    this.greenshoeHintText = this.add.text(15, this.greenshoeY + 13, 'TAP to release shares', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#00ff88'
+    
+    // Disabled overlay
+    this.buttonsDisabledOverlay = this.add.rectangle(width/2, buttonY, width, buttonHeight + 20, 0x000000, 0.7);
+    this.buttonsDisabledText = this.add.text(width/2, buttonY, 'Waiting for market...', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#666'
+    }).setOrigin(0.5);
+    
+    this.setButtonsEnabled(false);
+  }
+
+  createResourceDisplay() {
+    const width = this.cameras.main.width;
+    const y = 560;
+    
+    // Stabilization budget
+    this.add.text(20, y, 'STABILIZATION BUDGET', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#666'
     });
+    this.budgetBarBg = this.add.rectangle(20, y + 18, 120, 10, 0x1a2a3a).setOrigin(0, 0.5);
+    this.budgetBarFill = this.add.rectangle(20, y + 18, 120, 10, 0x0088ff).setOrigin(0, 0.5);
+    this.budgetText = this.add.text(145, y + 18, '100%', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#0088ff'
+    }).setOrigin(0, 0.5);
+    
+    // Greenshoe count
+    this.add.text(width - 20, y, 'GREENSHOES', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#666'
+    }).setOrigin(1, 0);
+    
     this.greenshoeIcons = [];
     for (let i = 0; i < 3; i++) {
-      const icon = this.add.circle(35 + i * 32, this.greenshoeY + 40, 12, 0x00ff88);
-      const glow = this.add.circle(35 + i * 32, this.greenshoeY + 40, 16, 0x00ff88, 0.25);
-      this.greenshoeIcons.push({ icon, glow, active: true });
+      const icon = this.add.circle(width - 25 - i * 28, y + 18, 10, 0x00aa55);
+      this.greenshoeIcons.push(icon);
     }
+    
+    // Score display
+    this.add.text(20, y + 40, 'CORRECT DECISIONS', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#666'
+    });
+    this.scoreText = this.add.text(20, y + 55, '0 / 0', {
+      fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#00ffaa'
+    });
+  }
 
-    // Volatility indicator
-    this.volText = this.add.text(width - 15, this.budgetY, 'VOLATILITY: LOW', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#00ff88'
-    }).setOrigin(1, 0);
-    this.volBarBg = this.add.rectangle(width - 15, this.budgetY + 20, 80, 8, 0x1a2a3a).setOrigin(1, 0.5);
-    this.volBar = this.add.rectangle(width - 15, this.budgetY + 20, 80, 8, 0x00ff88).setOrigin(1, 0.5);
-
-    // Action feedback area
-    this.hintText = this.add.text(width / 2, height - 18, '', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#ffaa00', fontStyle: 'bold'
+  createFeedbackDisplay() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+    
+    // Full screen feedback overlay
+    this.feedbackContainer = this.add.container(width / 2, height / 2);
+    
+    this.feedbackBg = this.add.rectangle(0, 0, width, height, 0x000000, 0.85);
+    this.feedbackContainer.add(this.feedbackBg);
+    
+    this.feedbackIcon = this.add.text(0, -60, '✓', {
+      fontSize: '60px', color: '#00ff88'
     }).setOrigin(0.5);
-  }
-
-  createPriceChart() {
-    const width = this.cameras.main.width;
-    this.chartX = 15;
-    this.chartY = 110;
-    this.chartWidth = width - 30;
-    this.chartHeight = 110;
-
-    this.chartBg = this.add.rectangle(
-      this.chartX + this.chartWidth / 2, 
-      this.chartY + this.chartHeight / 2, 
-      this.chartWidth, 
-      this.chartHeight, 
-      0x0a1520, 0.5
-    );
+    this.feedbackContainer.add(this.feedbackIcon);
     
-    this.chartBorder = this.add.rectangle(
-      this.chartX + this.chartWidth / 2, 
-      this.chartY + this.chartHeight / 2, 
-      this.chartWidth, 
-      this.chartHeight
-    ).setStrokeStyle(1, 0x1a3a5a, 0.4);
-
-    // Target band (green zone)
-    this.targetBand = this.add.rectangle(
-      this.chartX + this.chartWidth / 2, 
-      this.chartY + this.chartHeight / 2,
-      this.chartWidth, 
-      this.chartHeight * 0.28, 
-      0x00ff88, 0.1
-    );
-
-    this.priceLine = this.add.graphics();
-    this.priceGlowLine = this.add.graphics();
+    this.feedbackTitle = this.add.text(0, 10, 'CORRECT!', {
+      fontFamily: 'monospace', fontSize: '28px', fontStyle: 'bold', color: '#00ff88'
+    }).setOrigin(0.5);
+    this.feedbackContainer.add(this.feedbackTitle);
+    
+    this.feedbackDesc = this.add.text(0, 50, 'Price stabilized', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#aaa'
+    }).setOrigin(0.5);
+    this.feedbackContainer.add(this.feedbackDesc);
+    
+    this.feedbackPriceChange = this.add.text(0, 85, '', {
+      fontFamily: 'monospace', fontSize: '18px', fontStyle: 'bold', color: '#fff'
+    }).setOrigin(0.5);
+    this.feedbackContainer.add(this.feedbackPriceChange);
+    
+    this.feedbackContainer.setVisible(false);
+    this.feedbackContainer.setDepth(100);
   }
 
-  createOrderBook() {
-    const width = this.cameras.main.width;
-    this.orderBookY = this.chartY + this.chartHeight + 18;
-
-    this.add.text(15, this.orderBookY, 'ORDER BOOK — Investor demand', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#888'
+  setButtonsEnabled(enabled) {
+    this.buttonsDisabledOverlay.setVisible(!enabled);
+    this.buttonsDisabledText.setVisible(!enabled);
+    
+    this.decisionButtons.forEach(btn => {
+      btn.bg.setAlpha(enabled ? 1 : 0.3);
     });
+  }
 
-    const lanes = [
-      { name: 'Retail', color: 0x00aaff },
-      { name: 'Long-Only', color: 0x00ff88 },
-      { name: 'Hedge', color: 0xffaa00 },
-      { name: 'Momentum', color: 0xff6688 }
+  // Generate market scenarios
+  generateScenario() {
+    const scenarios = [
+      // Price Rising scenarios
+      {
+        type: 'rising',
+        icon: '📈',
+        title: 'Demand Surge!',
+        desc: 'Investors are piling in. Price is climbing fast!',
+        priceMove: 4 + Math.random() * 4, // +4 to +8
+        correctAction: 'supply',
+        wrongPenalty: 6,
+        rightReward: 2
+      },
+      {
+        type: 'rising',
+        icon: '🔥',
+        title: 'FOMO Buying!',
+        desc: 'Fear of missing out is driving rapid buying.',
+        priceMove: 5 + Math.random() * 5,
+        correctAction: 'supply',
+        wrongPenalty: 7,
+        rightReward: 3
+      },
+      {
+        type: 'rising',
+        icon: '🚀',
+        title: 'Momentum Building!',
+        desc: 'Hedge funds are aggressively buying.',
+        priceMove: 3 + Math.random() * 4,
+        correctAction: 'supply',
+        wrongPenalty: 5,
+        rightReward: 2
+      },
+      // Price Falling scenarios
+      {
+        type: 'falling',
+        icon: '📉',
+        title: 'Selling Pressure!',
+        desc: 'Early investors taking profits. Price dropping!',
+        priceMove: -(4 + Math.random() * 4),
+        correctAction: 'demand',
+        wrongPenalty: 6,
+        rightReward: 2
+      },
+      {
+        type: 'falling',
+        icon: '😰',
+        title: 'Panic Selling!',
+        desc: 'Negative sentiment spreading. Investors exiting.',
+        priceMove: -(5 + Math.random() * 5),
+        correctAction: 'demand',
+        wrongPenalty: 7,
+        rightReward: 3
+      },
+      {
+        type: 'falling',
+        icon: '⚠️',
+        title: 'Market Wobble!',
+        desc: 'Uncertainty causing selloff.',
+        priceMove: -(3 + Math.random() * 3),
+        correctAction: 'demand',
+        wrongPenalty: 5,
+        rightReward: 2
+      },
+      // Stable scenarios
+      {
+        type: 'stable',
+        icon: '⚖️',
+        title: 'Balanced Trading',
+        desc: 'Buy and sell orders are well matched.',
+        priceMove: (Math.random() - 0.5) * 2,
+        correctAction: 'nothing',
+        wrongPenalty: 4,
+        rightReward: 3
+      },
+      {
+        type: 'stable',
+        icon: '😌',
+        title: 'Calm Markets',
+        desc: 'Trading is orderly. No intervention needed.',
+        priceMove: (Math.random() - 0.5) * 1.5,
+        correctAction: 'nothing',
+        wrongPenalty: 4,
+        rightReward: 3
+      },
+      {
+        type: 'stable',
+        icon: '✨',
+        title: 'Perfect Balance',
+        desc: 'Supply and demand in equilibrium.',
+        priceMove: (Math.random() - 0.5) * 1,
+        correctAction: 'nothing',
+        wrongPenalty: 3,
+        rightReward: 4
+      }
     ];
-
-    const laneWidth = (width - 40) / 4;
-    this.laneBars = [];
-
-    lanes.forEach((lane, i) => {
-      const x = 20 + laneWidth * i + laneWidth / 2;
-      
-      this.add.text(x, this.orderBookY + 15, lane.name, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#aaa'
-      }).setOrigin(0.5, 0);
-
-      const barGlow = this.add.rectangle(x, this.orderBookY + 58, 38, 28, lane.color, 0.15).setOrigin(0.5, 1);
-      const bar = this.add.rectangle(x, this.orderBookY + 58, 34, 28, lane.color, 0.75).setOrigin(0.5, 1);
-      this.laneBars.push({ bar, barGlow, color: lane.color, demand: 45 + Math.random() * 20, targetDemand: 50 });
-    });
-  }
-
-  createHoldIndicator() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-
-    this.holdRing = this.add.graphics();
-    this.holdProgress = 0;
-    this.holdRing.setVisible(false);
-
-    this.stabilizeOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x00aaff, 0);
     
-    this.holdCenterText = this.add.text(width / 2, height / 2, '', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#00aaff', fontStyle: 'bold'
-    }).setOrigin(0.5).setAlpha(0);
-  }
-
-  // NEW: Create invisible touch zones for better mobile responsiveness
-  createTouchZones() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-
-    // Full screen interactive zone
-    this.touchZone = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0);
-    this.touchZone.setInteractive({ useHandCursor: false });
-    this.touchZone.setDepth(100); // Above everything
-  }
-
-  setupInput() {
-    // Use the touch zone for input instead of global input
-    this.touchZone.on('pointerdown', (pointer) => {
-      this.handlePointerDown(pointer);
-    });
-
-    this.touchZone.on('pointerup', (pointer) => {
-      this.handlePointerUp(pointer);
-    });
-
-    this.touchZone.on('pointerout', (pointer) => {
-      // Handle pointer leaving the game area
-      if (this.isHolding) {
-        this.handlePointerUp(pointer);
-      }
-    });
-
-    // Also handle global input as backup for mobile
-    this.input.on('pointerdown', (pointer) => {
-      if (!this.isHolding) {
-        this.handlePointerDown(pointer);
-      }
-    });
-
-    this.input.on('pointerup', (pointer) => {
-      this.handlePointerUp(pointer);
-    });
-
-    // Touch-specific handlers for better mobile support
-    this.input.addPointer(2); // Support multi-touch
-  }
-
-  handlePointerDown(pointer) {
-    if (this.gameState.gameOver) return;
-    
-    this.pointerDownTime = this.time.now;
-    this.isHolding = true;
-    
-    // Visual feedback immediately
-    if (this.gameState.stabilizationBudget > 0) {
-      this.holdRing.setVisible(true);
-      this.holdCenterText.setText('HOLDING...');
-      this.holdCenterText.setAlpha(0.5);
-    }
-    
-    // Resume audio on first interaction
-    if (this.callbacks.audioManager) {
-      this.callbacks.audioManager.resume();
-    }
-
-    // Immediate visual feedback - pulse the price display
-    this.tweens.add({
-      targets: this.priceGlow,
-      scale: 1.1,
-      duration: 100,
-      yoyo: true
-    });
-  }
-
-  handlePointerUp(pointer) {
-    if (!this.isHolding) return;
-    
-    const holdDuration = this.time.now - this.pointerDownTime;
-
-    // TAP detection - more lenient timing for mobile (was 250, now 350)
-    if (holdDuration < 350) {
-      this.activateGreenshoe();
-    }
-
-    // Stop stabilization
-    if (this.gameState.isStabilizing && this.callbacks.audioManager) {
-      this.callbacks.audioManager.playStabilizeEnd();
-    }
-
-    this.isHolding = false;
-    this.gameState.isStabilizing = false;
-    this.holdRing.setVisible(false);
-    this.holdProgress = 0;
-    this.stabilizeOverlay.setAlpha(0);
-    this.holdCenterText.setAlpha(0);
-  }
-
-  activateGreenshoe() {
-    if (this.gameState.greenshoesRemaining <= 0 || this.gameState.gameOver) return;
-
-    this.gameState.greenshoesRemaining--;
-    this.gameState.greenshoesUsed++;
-
-    // Play sound
-    if (this.callbacks.audioManager) {
-      this.callbacks.audioManager.playGreenshoe();
-    }
-
-    // Visual feedback - deactivate icon
-    const iconIndex = 3 - this.gameState.greenshoesRemaining - 1;
-    if (this.greenshoeIcons[iconIndex]) {
-      const { icon, glow } = this.greenshoeIcons[iconIndex];
-      this.tweens.add({
-        targets: [icon, glow],
-        alpha: 0.2,
-        scale: 0.5,
-        duration: 300,
-        ease: 'Power2'
-      });
-      this.greenshoeIcons[iconIndex].active = false;
-    }
-
-    // Effect depends on current price - good timing = price > 105
-    if (this.gameState.price > 105) {
-      this.gameState.price *= 0.95;
-      this.gameState.perfectGreenshoes++;
-      this.showHint('✓ GREENSHOE COOLED THE PRICE!', '#00ff88');
-    } else if (this.gameState.price > 102) {
-      this.gameState.price *= 0.98;
-      this.showHint('Greenshoe used — moderate effect', '#ffaa00');
+    // Weight scenarios based on phase
+    let filtered = scenarios;
+    if (this.gameState.phase === 0) {
+      // Phase 1: More rising scenarios (IPO hype)
+      filtered = scenarios.filter(s => s.type === 'rising' || s.type === 'stable');
+    } else if (this.gameState.phase === 1) {
+      // Phase 2: Mixed
+      filtered = scenarios;
     } else {
-      this.showHint('⚠ Price was fine — greenshoe wasted', '#ff6666');
+      // Phase 3: More volatility
+      filtered = scenarios.filter(s => s.type !== 'stable' || Math.random() > 0.5);
     }
     
-    this.gameState.volatility *= 0.65;
-
-    // Flash effect
-    this.cameras.main.flash(200, 0, 255, 136);
-    
-    // Burst particles
-    this.createBurstParticles(this.cameras.main.width / 2, this.cameras.main.height / 2, 0x00ff88);
-
-    if (this.callbacks.onGreenshoe) {
-      this.callbacks.onGreenshoe(this.gameState.greenshoesRemaining);
-    }
+    return filtered[Math.floor(Math.random() * filtered.length)];
   }
 
-  createBurstParticles(x, y, color) {
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2;
-      const particle = this.add.circle(x, y, 5, color, 0.9);
-      this.tweens.add({
-        targets: particle,
-        x: x + Math.cos(angle) * 70,
-        y: y + Math.sin(angle) * 70,
-        alpha: 0,
-        scale: 0.2,
-        duration: 450,
-        ease: 'Power2',
-        onComplete: () => particle.destroy()
-      });
-    }
-  }
-
-  showHint(text, color = '#ffaa00') {
-    this.hintText.setText(text);
-    this.hintText.setColor(color);
-    this.hintText.setAlpha(1);
-    this.hintText.setScale(1.1);
-    
-    this.tweens.add({
-      targets: this.hintText,
-      scale: 1,
-      duration: 150
-    });
-    
-    this.tweens.add({
-      targets: this.hintText,
-      alpha: 0,
-      duration: 600,
-      delay: 2200
-    });
-  }
-
-  transitionToPhase(phase) {
+  startNextRound() {
     if (this.gameState.gameOver) return;
+    
+    this.gameState.roundNumber++;
+    
+    // Check if game is over
+    if (this.gameState.roundNumber > this.gameState.totalRounds) {
+      this.endGame();
+      return;
+    }
+    
+    // Update phase (4 rounds per phase)
+    const newPhase = Math.floor((this.gameState.roundNumber - 1) / 4);
+    if (newPhase !== this.gameState.phase) {
+      this.gameState.phase = newPhase;
+      this.showPhaseTransition(newPhase);
+      return; // Phase transition will call startNextRound after
+    }
+    
+    // Generate scenario
+    const scenario = this.generateScenario();
+    this.gameState.currentScenario = scenario;
+    
+    // Update UI
+    this.updateRoundDisplay();
+    
+    // Show scenario and enable decisions
+    this.showScenario(scenario);
+  }
 
-    this.gameState.phase = phase;
-    const phases = [
-      { name: 'Bookbuilding', desc: 'Orders flowing in — manage allocation' },
-      { name: 'First Print', desc: 'Trading begins — stabilize the price!' },
-      { name: 'Aftermarket', desc: 'News events — react quickly!' }
-    ];
-
-    this.phaseText.setText(`PHASE ${phase + 1}: ${phases[phase].name}`);
-    this.phaseDescText.setText(phases[phase].desc);
-
+  showPhaseTransition(phase) {
+    const phases = ['Bookbuilding Rush', 'First Print', 'Aftermarket Wave'];
+    const descs = ['Managing initial demand', 'Price discovery begins', 'Reacting to news'];
+    
+    // Flash effect
+    this.cameras.main.flash(400, 0, 170, 255);
+    
     if (this.callbacks.audioManager) {
       this.callbacks.audioManager.playPhaseTransition();
     }
-
-    // Moderate volatility increase on phase change
-    this.gameState.volatility += 0.02;
-
-    this.cameras.main.flash(300, 0, 170, 255);
     
-    this.tweens.add({
-      targets: this.phaseText,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      duration: 200,
-      yoyo: true
+    this.phaseDescText.setText(`Phase ${phase + 1}: ${phases[phase]}`);
+    
+    // Show phase overlay
+    this.feedbackContainer.setVisible(true);
+    this.feedbackIcon.setText(['📋', '💹', '📰'][phase]);
+    this.feedbackTitle.setText(`PHASE ${phase + 1}`);
+    this.feedbackTitle.setColor('#00aaff');
+    this.feedbackDesc.setText(phases[phase]);
+    this.feedbackPriceChange.setText(descs[phase]);
+    
+    this.time.delayedCall(2000, () => {
+      this.feedbackContainer.setVisible(false);
+      this.startNextRound();
     });
-
-    if (this.callbacks.onPhaseChange) {
-      this.callbacks.onPhaseChange(phase);
-    }
   }
 
-  triggerDemandSurge() {
-    const surge = 0.3 + Math.random() * 0.3; // Reduced intensity
-    this.gameState.volatility += surge * 0.05;
+  showScenario(scenario) {
+    // Update scenario display
+    this.scenarioContainer.setVisible(true);
+    this.scenarioIcon.setText(scenario.icon);
+    this.scenarioTitle.setText(scenario.title);
+    this.scenarioDesc.setText(scenario.desc);
     
-    const randomLane = Math.floor(Math.random() * 4);
-    this.laneBars[randomLane].targetDemand = Math.min(90, this.laneBars[randomLane].demand + 20);
-
-    this.showHint('⚡ Demand surge incoming!', '#ffaa00');
+    // Color code the scenario box based on type
+    const colors = {
+      rising: { border: 0xff6644, bg: 0xff6644 },
+      falling: { border: 0x4488ff, bg: 0x4488ff },
+      stable: { border: 0x888888, bg: 0x888888 }
+    };
+    this.scenarioBg.setStrokeStyle(3, colors[scenario.type].border, 0.8);
+    
+    // Animate scenario appearance
+    this.scenarioContainer.setScale(0.8);
+    this.scenarioContainer.setAlpha(0);
+    this.tweens.add({
+      targets: this.scenarioContainer,
+      scale: 1,
+      alpha: 1,
+      duration: 300,
+      ease: 'Back.out'
+    });
+    
+    // Preview the price movement
+    this.previewPriceMove(scenario.priceMove);
+    
+    // Start decision timer
+    this.gameState.inDecisionMode = true;
+    this.gameState.decisionTimer = this.gameState.decisionTimeLimit;
+    this.setButtonsEnabled(true);
+    
+    // Highlight the recommended button based on scenario type
+    this.highlightCorrectButton(scenario.correctAction);
+    
+    // Timer countdown
+    this.timerEvent = this.time.addEvent({
+      delay: 100,
+      callback: () => this.updateDecisionTimer(),
+      loop: true
+    });
     
     if (this.callbacks.audioManager) {
       this.callbacks.audioManager.playTick();
     }
   }
 
-  triggerNewsEvent(positive) {
-    const impact = 0.05 + Math.random() * 0.04; // Reduced from 0.08-0.15
-    this.gameState.price *= positive ? (1 + impact) : (1 - impact);
-    this.gameState.volatility += 0.03;
+  highlightCorrectButton(correctAction) {
+    // Subtle hint - pulse the correct button's border
+    const correctBtn = this.decisionButtons.find(b => b.id === correctAction);
+    if (correctBtn) {
+      this.tweens.add({
+        targets: correctBtn.glow,
+        alpha: 0.15,
+        duration: 500,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+  }
 
-    if (positive) {
-      this.showHint('📈 POSITIVE NEWS! Price rising', '#00ff88');
-      this.cameras.main.flash(200, 0, 255, 100);
-      if (this.callbacks.audioManager) {
-        this.callbacks.audioManager.playPositiveNews();
+  previewPriceMove(priceMove) {
+    const direction = priceMove > 1 ? '↑' : priceMove < -1 ? '↓' : '→';
+    const color = priceMove > 1 ? '#ff6644' : priceMove < -1 ? '#4488ff' : '#888888';
+    const magnitude = Math.abs(priceMove) > 5 ? ' FAST!' : '';
+    
+    this.priceChangeText.setText(`${direction} ${priceMove > 0 ? '+' : ''}${priceMove.toFixed(1)}%${magnitude}`);
+    this.priceChangeText.setColor(color);
+    
+    // Animate price change indicator
+    this.tweens.add({
+      targets: this.priceChangeText,
+      y: priceMove > 0 ? 45 : 55,
+      duration: 500,
+      yoyo: true,
+      repeat: -1
+    });
+  }
+
+  updateDecisionTimer() {
+    if (!this.gameState.inDecisionMode) {
+      if (this.timerEvent) this.timerEvent.remove();
+      return;
+    }
+    
+    this.gameState.decisionTimer -= 0.1;
+    
+    // Update timer bar
+    const progress = this.gameState.decisionTimer / this.gameState.decisionTimeLimit;
+    const barWidth = (this.cameras.main.width - 60) * progress;
+    this.timerBarFill.setScale(progress, 1);
+    
+    // Color changes as time runs out
+    if (progress < 0.3) {
+      this.timerBarFill.setFillStyle(0xff4444);
+    } else if (progress < 0.6) {
+      this.timerBarFill.setFillStyle(0xffaa00);
+    }
+    
+    this.timerText.setText(`${this.gameState.decisionTimer.toFixed(1)}s`);
+    
+    // Time's up - auto select "do nothing"
+    if (this.gameState.decisionTimer <= 0) {
+      this.makeDecision('nothing', true);
+    }
+  }
+
+  makeDecision(action, timedOut = false) {
+    if (!this.gameState.inDecisionMode) return;
+    
+    this.gameState.inDecisionMode = false;
+    this.setButtonsEnabled(false);
+    if (this.timerEvent) this.timerEvent.remove();
+    
+    // Stop all button tweens
+    this.tweens.killTweensOf(this.decisionButtons.map(b => b.glow));
+    this.decisionButtons.forEach(b => b.glow.setAlpha(0));
+    
+    // Stop price change animation
+    this.tweens.killTweensOf(this.priceChangeText);
+    this.priceChangeText.setY(50);
+    
+    const scenario = this.gameState.currentScenario;
+    const isCorrect = action === scenario.correctAction;
+    
+    // Check resource availability
+    let canPerformAction = true;
+    if (action === 'demand' && this.gameState.stabilizationBudget < 15) {
+      canPerformAction = false;
+    }
+    if (action === 'supply' && this.gameState.greenshoesRemaining <= 0) {
+      canPerformAction = false;
+    }
+    
+    // Calculate price impact
+    let priceChange = scenario.priceMove;
+    
+    if (canPerformAction) {
+      if (isCorrect) {
+        // Correct action - mitigate the move and bonus
+        priceChange = priceChange * 0.2; // 80% mitigation
+        this.gameState.correctDecisions++;
+        
+        if (action === 'demand') {
+          this.gameState.stabilizationBudget -= 15;
+        } else if (action === 'supply') {
+          this.gameState.greenshoesRemaining--;
+          this.updateGreenshoeDisplay();
+        }
+      } else if (action !== 'nothing') {
+        // Wrong intervention - makes it worse!
+        priceChange = priceChange * 1.5 + (scenario.wrongPenalty * (priceChange > 0 ? 1 : -1));
+        
+        if (action === 'demand') {
+          this.gameState.stabilizationBudget -= 15;
+        } else if (action === 'supply') {
+          this.gameState.greenshoesRemaining--;
+          this.updateGreenshoeDisplay();
+        }
+      } else {
+        // Did nothing when should have acted
+        priceChange = priceChange * 1.2;
       }
     } else {
-      this.showHint('📉 NEGATIVE NEWS! Price falling', '#ff4444');
-      this.cameras.main.shake(250, 0.008);
+      // Couldn't perform action
+      priceChange = priceChange * 1.3;
+    }
+    
+    this.gameState.totalDecisions++;
+    
+    // Apply price change
+    const oldPrice = this.gameState.price;
+    this.gameState.price = Math.max(85, Math.min(120, this.gameState.price * (1 + priceChange / 100)));
+    
+    // Record in history
+    this.gameState.priceHistory.push({
+      time: this.gameState.roundNumber,
+      price: this.gameState.price
+    });
+    
+    // Update score
+    this.updateScore(isCorrect, Math.abs(this.gameState.price - 100));
+    
+    // Show feedback
+    this.showFeedback(isCorrect, action, scenario, oldPrice, this.gameState.price, timedOut, canPerformAction);
+  }
+
+  showFeedback(isCorrect, action, scenario, oldPrice, newPrice, timedOut, canPerformAction) {
+    this.feedbackContainer.setVisible(true);
+    
+    if (!canPerformAction) {
+      this.feedbackIcon.setText('🚫');
+      this.feedbackTitle.setText('NO RESOURCES!');
+      this.feedbackTitle.setColor('#ff8800');
+      this.feedbackDesc.setText(`Can't ${action === 'demand' ? 'stabilize - no budget' : 'add supply - no greenshoes'}`);
+    } else if (timedOut) {
+      this.feedbackIcon.setText('⏰');
+      this.feedbackTitle.setText('TIME UP!');
+      this.feedbackTitle.setColor('#ff8800');
+      this.feedbackDesc.setText(isCorrect ? 'Doing nothing was correct!' : 'You should have acted!');
+    } else if (isCorrect) {
+      this.feedbackIcon.setText('✓');
+      this.feedbackTitle.setText('CORRECT!');
+      this.feedbackTitle.setColor('#00ff88');
+      
+      const actionDescs = {
+        demand: 'Buy support stabilized the price!',
+        supply: 'Extra shares cooled the demand!',
+        nothing: 'Smart to let the market settle!'
+      };
+      this.feedbackDesc.setText(actionDescs[action]);
+      
+      if (this.callbacks.audioManager) {
+        this.callbacks.audioManager.playGreenshoe();
+      }
+    } else {
+      this.feedbackIcon.setText('✗');
+      this.feedbackTitle.setText('WRONG MOVE!');
+      this.feedbackTitle.setColor('#ff4444');
+      
+      const wrongDescs = {
+        demand: `Buying when price was ${scenario.type === 'rising' ? 'rising pushed it higher!' : 'stable wasted budget!'}`,
+        supply: `Adding supply when price was ${scenario.type === 'falling' ? 'falling made it crash!' : 'stable wasted a greenshoe!'}`,
+        nothing: `Should have ${scenario.correctAction === 'demand' ? 'bought support!' : 'added supply!'}`
+      };
+      this.feedbackDesc.setText(wrongDescs[action]);
+      
       if (this.callbacks.audioManager) {
         this.callbacks.audioManager.playNegativeNews();
       }
-    }
-  }
-
-  gameLoop() {
-    if (this.gameState.gameOver) return;
-
-    this.gameState.totalTime += 0.15;
-    this.tickCounter++;
-
-    // Handle holding (stabilization) - more responsive
-    if (this.isHolding && this.gameState.stabilizationBudget > 0) {
-      const holdDuration = this.time.now - this.pointerDownTime;
       
-      // Start stabilization after shorter hold (200ms instead of 250ms)
-      if (holdDuration > 200) {
-        if (!this.gameState.isStabilizing) {
-          if (this.callbacks.audioManager) {
-            this.callbacks.audioManager.playStabilizeStart();
-          }
-          this.showHint('STABILIZING...', '#00aaff');
-        }
-        
-        this.gameState.isStabilizing = true;
-        this.gameState.stabilizationBudget -= 0.6;
-        this.gameState.budgetUsed += 0.6;
-        this.gameState.stabilizationTime += 0.15;
-        this.gameState.volatility *= 0.97;
-
-        // Stronger price support when dropping
-        if (this.gameState.price < 98) {
-          this.gameState.price += 0.35;
-        } else if (this.gameState.price < 100) {
-          this.gameState.price += 0.15;
-        }
-
-        // Visual feedback
-        this.stabilizeOverlay.setAlpha(0.06 + Math.sin(this.gameState.totalTime * 8) * 0.03);
-        this.holdProgress = Math.min(1, holdDuration / 600);
-        this.holdCenterText.setText('STABILIZING');
-        this.holdCenterText.setAlpha(0.7);
-        this.budgetBarGlow.setAlpha(0.4 + Math.sin(this.gameState.totalTime * 6) * 0.2);
-      }
-    } else {
-      this.budgetBarGlow.setAlpha(0);
+      // Screen shake for wrong answer
+      this.cameras.main.shake(300, 0.01);
     }
-
-    // Hide hold ring when budget depleted
-    if (this.gameState.stabilizationBudget <= 0) {
-      this.holdRing.setVisible(false);
-      if (this.isHolding) {
-        this.holdCenterText.setText('NO BUDGET');
-        this.holdCenterText.setAlpha(0.7);
-      }
-      
-      if (this.gameState.isStabilizing && this.callbacks.audioManager) {
-        this.callbacks.audioManager.playStabilizeEnd();
-        this.gameState.isStabilizing = false;
-      }
-    }
-
-    // Price dynamics - SMOOTHER with less random noise
-    this.updatePrice();
-    this.updateUI();
-    this.updateScore();
-    this.updateParticles();
-    this.updateGrid();
-
-    // Update music intensity
-    if (this.callbacks.audioManager && this.tickCounter % 4 === 0) {
-      this.callbacks.audioManager.setIntensity(this.gameState.volatility * 4);
-    }
-
-    // Occasional tick sounds
-    if (this.tickCounter % 20 === 0 && this.callbacks.audioManager) {
-      this.callbacks.audioManager.playTick();
-    }
-
-    // Volatility warning
-    if (this.gameState.volatility > 0.08 && 
-        this.gameState.totalTime - this.gameState.lastVolatilityWarning > 8) {
-      this.gameState.lastVolatilityWarning = this.gameState.totalTime;
-      if (this.callbacks.audioManager) {
-        this.callbacks.audioManager.playVolatilityWarning();
-      }
-    }
-
-    if (this.callbacks.onStateUpdate) {
-      this.callbacks.onStateUpdate({ ...this.gameState });
-    }
-  }
-
-  updatePrice() {
-    // SMOOTHER price movement - reduced noise and stronger mean reversion
-    const noise = (Math.random() - 0.5) * 1.5 * this.gameState.volatility;
-    const meanReversion = (this.gameState.targetPrice - this.gameState.price) * 0.012;
     
-    this.gameState.price += this.gameState.price * (noise + meanReversion);
-    this.gameState.price = Math.max(88, Math.min(115, this.gameState.price));
-
-    this.gameState.priceHistory.push({ time: this.gameState.totalTime, price: this.gameState.price });
-    if (this.gameState.priceHistory.length > 150) this.gameState.priceHistory.shift();
-
-    // Slower volatility decay
-    this.gameState.volatility = Math.max(0.02, this.gameState.volatility * 0.994);
-    this.gameState.maxVolatility = Math.max(this.gameState.maxVolatility, this.gameState.volatility);
-  }
-
-  updateUI() {
-    // Price with color and glow
-    const priceColor = this.gameState.price >= 98 && this.gameState.price <= 102 ? '#00ff88' :
-                       this.gameState.price >= 95 && this.gameState.price <= 105 ? '#ffaa00' : '#ff4444';
-    const priceColorHex = this.gameState.price >= 98 && this.gameState.price <= 102 ? 0x00ff88 :
-                          this.gameState.price >= 95 && this.gameState.price <= 105 ? 0xffaa00 : 0xff4444;
+    // Show price change
+    const change = newPrice - oldPrice;
+    this.feedbackPriceChange.setText(
+      `$${oldPrice.toFixed(2)} → $${newPrice.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)})`
+    );
+    this.feedbackPriceChange.setColor(Math.abs(newPrice - 100) < Math.abs(oldPrice - 100) ? '#00ff88' : '#ff4444');
     
-    this.priceText.setText(`$${this.gameState.price.toFixed(2)}`);
-    this.priceText.setColor(priceColor);
-    this.priceGlow.setFillStyle(priceColorHex, 0.12 + Math.sin(this.gameState.totalTime * 2) * 0.04);
-
-    // Timer with urgency
-    const remaining = Math.max(0, 90 - this.gameState.totalTime);
-    this.timerText.setText(`${Math.ceil(remaining)}s`);
-    if (remaining < 15) {
-      this.timerText.setColor('#ff4444');
-      this.timerText.setScale(1 + Math.sin(this.gameState.totalTime * 5) * 0.04);
-    } else if (remaining < 30) {
-      this.timerText.setColor('#ffaa00');
-    }
-
-    // Budget bar
-    const budgetRatio = Math.max(0, this.gameState.stabilizationBudget / 100);
-    this.budgetBarFill.setScale(budgetRatio, 1);
-    const budgetColor = budgetRatio > 0.5 ? 0x00aaff : budgetRatio > 0.25 ? 0xffaa00 : 0xff4444;
-    this.budgetBarFill.setFillStyle(budgetColor);
+    // Update displays
+    this.updatePriceDisplay();
+    this.updateBudgetDisplay();
+    this.updateScoreDisplay();
+    this.drawChart();
     
-    // Update budget hint when low
-    if (budgetRatio < 0.1) {
-      this.budgetHintText.setText('Budget depleted!');
-      this.budgetHintText.setColor('#ff4444');
-    }
-
-    // Volatility indicator
-    let volLabel = 'LOW', volColor = '#00ff88', volColorHex = 0x00ff88;
-    if (this.gameState.volatility > 0.08) { 
-      volLabel = 'HIGH'; volColor = '#ff4444'; volColorHex = 0xff4444;
-    } else if (this.gameState.volatility > 0.05) { 
-      volLabel = 'MED'; volColor = '#ffaa00'; volColorHex = 0xffaa00;
-    }
-    this.volText.setText(`VOLATILITY: ${volLabel}`);
-    this.volText.setColor(volColor);
-    this.volBar.setFillStyle(volColorHex);
-    this.volBar.setScale(Math.min(1, this.gameState.volatility * 10), 1);
-
-    this.drawPriceChart();
-
-    // Order book with smooth animations
-    this.laneBars.forEach(lb => {
-      lb.demand += (lb.targetDemand - lb.demand) * 0.08;
-      lb.demand += (Math.random() - 0.5) * 1.5;
-      lb.demand = Math.max(20, Math.min(90, lb.demand));
-      lb.targetDemand += (50 - lb.targetDemand) * 0.015;
-      
-      const scale = lb.demand / 50;
-      lb.bar.setScale(1, scale);
-      lb.barGlow.setScale(1.1, scale * 1.1);
+    // Animate feedback
+    this.feedbackContainer.setScale(0.8);
+    this.tweens.add({
+      targets: this.feedbackContainer,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.out'
     });
+    
+    // Hide feedback and continue
+    this.time.delayedCall(2000, () => {
+      this.feedbackContainer.setVisible(false);
+      this.scenarioContainer.setVisible(false);
+      this.priceChangeText.setText('');
+      this.time.delayedCall(500, () => this.startNextRound());
+    });
+  }
 
-    // Hold indicator ring
-    if (this.isHolding && this.holdProgress > 0 && this.gameState.stabilizationBudget > 0) {
-      this.holdRing.clear();
-      this.holdRing.lineStyle(5, 0x00aaff, 0.9);
-      const cx = this.cameras.main.width / 2;
-      const cy = this.cameras.main.height / 2;
-      this.holdRing.beginPath();
-      this.holdRing.arc(cx, cy, 50, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * this.holdProgress);
-      this.holdRing.strokePath();
-      
-      // Inner glow
-      this.holdRing.lineStyle(10, 0x00aaff, 0.25);
-      this.holdRing.beginPath();
-      this.holdRing.arc(cx, cy, 50, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * this.holdProgress);
-      this.holdRing.strokePath();
+  updateRoundDisplay() {
+    this.phaseText.setText(`ROUND ${this.gameState.roundNumber} of ${this.gameState.totalRounds}`);
+    
+    // Update progress bar
+    const progress = this.gameState.roundNumber / this.gameState.totalRounds;
+    this.progressFill.setScale(progress, 1);
+  }
+
+  updatePriceDisplay() {
+    const price = this.gameState.price;
+    const priceColor = price >= 98 && price <= 102 ? '#00ff88' :
+                       price >= 95 && price <= 105 ? '#ffaa00' : '#ff4444';
+    const priceColorHex = price >= 98 && price <= 102 ? 0x00ff88 :
+                          price >= 95 && price <= 105 ? 0xffaa00 : 0xff4444;
+    
+    this.priceText.setText(`$${price.toFixed(2)}`);
+    this.priceText.setColor(priceColor);
+    this.priceGlow.setFillStyle(priceColorHex, 0.15);
+  }
+
+  updateBudgetDisplay() {
+    const ratio = this.gameState.stabilizationBudget / 100;
+    this.budgetBarFill.setScale(ratio, 1);
+    this.budgetText.setText(`${Math.round(this.gameState.stabilizationBudget)}%`);
+    
+    const color = ratio > 0.5 ? 0x0088ff : ratio > 0.25 ? 0xffaa00 : 0xff4444;
+    this.budgetBarFill.setFillStyle(color);
+    this.budgetText.setColor(ratio > 0.5 ? '#0088ff' : ratio > 0.25 ? '#ffaa00' : '#ff4444');
+  }
+
+  updateGreenshoeDisplay() {
+    for (let i = 0; i < 3; i++) {
+      const hasThis = i < this.gameState.greenshoesRemaining;
+      this.greenshoeIcons[2-i].setFillStyle(hasThis ? 0x00aa55 : 0x333333);
+      this.greenshoeIcons[2-i].setAlpha(hasThis ? 1 : 0.4);
     }
   }
 
-  drawPriceChart() {
-    this.priceLine.clear();
-    this.priceGlowLine.clear();
+  updateScoreDisplay() {
+    this.scoreText.setText(`${this.gameState.correctDecisions} / ${this.gameState.totalDecisions}`);
+  }
+
+  updateScore(isCorrect, priceDeviation) {
+    if (isCorrect) {
+      this.gameState.score.stability += 30;
+      this.gameState.score.efficiency += 15;
+    }
+    
+    if (priceDeviation < 3) {
+      this.gameState.score.reputation += 10;
+    }
+    
+    this.gameState.score.liquidity += 12;
+  }
+
+  drawChart() {
+    this.chartGraphics.clear();
     
     const history = this.gameState.priceHistory;
     if (history.length < 2) return;
-
-    const minPrice = 92, maxPrice = 112;
-    const priceRange = maxPrice - minPrice;
-    const points = history.slice(-60);
-    const xStep = this.chartWidth / 60;
-
-    // Glow line
-    this.priceGlowLine.lineStyle(10, 0x00ffaa, 0.1);
-    this.priceGlowLine.beginPath();
-    points.forEach((point, i) => {
-      const x = this.chartX + i * xStep;
-      const y = this.chartY + this.chartHeight - ((point.price - minPrice) / priceRange) * this.chartHeight;
-      if (i === 0) this.priceGlowLine.moveTo(x, y);
-      else this.priceGlowLine.lineTo(x, y);
-    });
-    this.priceGlowLine.strokePath();
-
-    // Main line
-    this.priceLine.lineStyle(3, 0x00ffaa, 1);
-    this.priceLine.beginPath();
-    points.forEach((point, i) => {
-      const x = this.chartX + i * xStep;
-      const y = this.chartY + this.chartHeight - ((point.price - minPrice) / priceRange) * this.chartHeight;
-      if (i === 0) this.priceLine.moveTo(x, y);
-      else this.priceLine.lineTo(x, y);
-    });
-    this.priceLine.strokePath();
-
-    // Current price dot
-    const lastPoint = points[points.length - 1];
-    const lastX = this.chartX + (points.length - 1) * xStep;
-    const lastY = this.chartY + this.chartHeight - ((lastPoint.price - minPrice) / priceRange) * this.chartHeight;
-    this.priceLine.fillStyle(0x00ffaa, 1);
-    this.priceLine.fillCircle(lastX, lastY, 6);
-    this.priceLine.fillStyle(0x00ffaa, 0.35);
-    this.priceLine.fillCircle(lastX, lastY, 12);
-  }
-
-  updateParticles() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
     
-    this.particles.forEach(p => {
-      p.x += p.velocity.x;
-      p.y += p.velocity.y - this.gameState.volatility * 1.2;
+    const minPrice = 90, maxPrice = 115;
+    const priceRange = maxPrice - minPrice;
+    
+    // Draw target zone
+    this.chartGraphics.fillStyle(0x00ff88, 0.1);
+    const zoneTop = this.chartY + this.chartHeight * (1 - (105 - minPrice) / priceRange);
+    const zoneBottom = this.chartY + this.chartHeight * (1 - (95 - minPrice) / priceRange);
+    this.chartGraphics.fillRect(this.chartX, zoneTop, this.chartWidth, zoneBottom - zoneTop);
+    
+    // Draw price line
+    this.chartGraphics.lineStyle(3, 0x00ffaa, 1);
+    this.chartGraphics.beginPath();
+    
+    const xStep = this.chartWidth / Math.max(12, history.length - 1);
+    history.forEach((point, i) => {
+      const x = this.chartX + i * xStep;
+      const y = this.chartY + this.chartHeight * (1 - (point.price - minPrice) / priceRange);
       
-      if (p.y < 0) p.y = height;
-      if (p.x < 0) p.x = width;
-      if (p.x > width) p.x = 0;
-      
-      p.setAlpha(0.25 + Math.sin(this.gameState.totalTime * p.pulseSpeed * 50 + p.pulseOffset) * 0.15);
+      if (i === 0) this.chartGraphics.moveTo(x, y);
+      else this.chartGraphics.lineTo(x, y);
     });
-  }
-
-  updateScore() {
-    const priceDev = Math.abs(this.gameState.price - 100) / 100;
-    const stabInc = (1 - priceDev * 4) * 0.5;
-    this.gameState.score.stability = Math.min(400, this.gameState.score.stability + Math.max(0, stabInc));
-
-    const avgDemand = this.laneBars.reduce((s, b) => s + b.demand, 0) / 4;
-    this.gameState.score.liquidity = Math.min(200, this.gameState.score.liquidity + (avgDemand > 40 ? 0.3 : 0.12));
-
-    if (this.gameState.volatility < 0.06) {
-      this.gameState.score.reputation = Math.min(200, this.gameState.score.reputation + 0.3);
-    }
+    this.chartGraphics.strokePath();
+    
+    // Draw current price dot
+    const lastPoint = history[history.length - 1];
+    const lastX = this.chartX + (history.length - 1) * xStep;
+    const lastY = this.chartY + this.chartHeight * (1 - (lastPoint.price - minPrice) / priceRange);
+    
+    this.chartGraphics.fillStyle(0x00ffaa, 1);
+    this.chartGraphics.fillCircle(lastX, lastY, 6);
   }
 
   endGame() {
     this.gameState.gameOver = true;
-    this.gameTimer.remove();
-
-    // Efficiency score based on greenshoe timing
-    const budgetEff = this.gameState.stabilizationBudget / 100;
-    const gsEff = this.gameState.greenshoesUsed > 0 
-      ? this.gameState.perfectGreenshoes / this.gameState.greenshoesUsed 
-      : 0.5;
-    this.gameState.score.efficiency = Math.min(200, (budgetEff * 80) + (gsEff * 120));
-
+    
+    // Calculate final score
+    const accuracyBonus = (this.gameState.correctDecisions / this.gameState.totalDecisions) * 200;
+    const priceBonus = Math.max(0, 100 - Math.abs(this.gameState.price - 100) * 10);
+    
     const totalScore = Math.round(
-      this.gameState.score.stability + this.gameState.score.liquidity +
-      this.gameState.score.efficiency + this.gameState.score.reputation
+      this.gameState.score.stability +
+      this.gameState.score.liquidity +
+      this.gameState.score.efficiency +
+      this.gameState.score.reputation +
+      accuracyBonus +
+      priceBonus
     );
-
+    
     let rank = 'Analyst';
-    if (totalScore >= 850) rank = 'Managing Director';
-    else if (totalScore >= 700) rank = 'Director';
-    else if (totalScore >= 550) rank = 'VP';
+    if (totalScore >= 800) rank = 'Managing Director';
+    else if (totalScore >= 650) rank = 'Director';
+    else if (totalScore >= 500) rank = 'VP';
     else if (totalScore >= 350) rank = 'Associate';
-
+    
     const badges = [];
-    if (this.gameState.maxVolatility < 0.07) badges.push({ id: 'smooth', name: 'Smooth Operator' });
-    if (this.gameState.score.liquidity >= 180) badges.push({ id: 'demand', name: 'Demand Master' });
-    if (this.gameState.budgetUsed < 50) badges.push({ id: 'budget', name: 'Budget Hawk' });
-    if (this.gameState.perfectGreenshoes >= 2) badges.push({ id: 'timing', name: 'Perfect Timing' });
-
+    if (this.gameState.correctDecisions >= 10) badges.push({ id: 'accurate', name: 'Sharp Instincts' });
+    if (Math.abs(this.gameState.price - 100) < 3) badges.push({ id: 'stable', name: 'Price Master' });
+    if (this.gameState.stabilizationBudget > 30) badges.push({ id: 'efficient', name: 'Budget Hawk' });
+    if (this.gameState.greenshoesRemaining > 0) badges.push({ id: 'reserved', name: 'Reserved Power' });
+    
     if (this.callbacks.audioManager) {
-      this.callbacks.audioManager.playGameEnd(totalScore >= 550);
+      this.callbacks.audioManager.playGameEnd(totalScore >= 500);
     }
-
+    
     const finalResult = {
       totalScore,
       rank,
       badges,
-      scores: this.gameState.score,
+      scores: {
+        stability: Math.round(this.gameState.score.stability + priceBonus),
+        liquidity: Math.round(this.gameState.score.liquidity),
+        efficiency: Math.round(this.gameState.score.efficiency + accuracyBonus),
+        reputation: Math.round(this.gameState.score.reputation)
+      },
       priceHistory: this.gameState.priceHistory,
       finalPrice: this.gameState.price,
       budgetRemaining: this.gameState.stabilizationBudget,
-      greenshoesUsed: this.gameState.greenshoesUsed,
-      maxVolatility: this.gameState.maxVolatility,
-      perfectGreenshoes: this.gameState.perfectGreenshoes
+      greenshoesUsed: 3 - this.gameState.greenshoesRemaining,
+      correctDecisions: this.gameState.correctDecisions,
+      totalDecisions: this.gameState.totalDecisions,
+      maxVolatility: 0.1,
+      perfectGreenshoes: this.gameState.correctDecisions
     };
-
+    
     if (this.callbacks.onGameEnd) {
       this.callbacks.onGameEnd(finalResult);
     }
@@ -849,7 +951,6 @@ const GameContainer = ({ onGameEnd, onPhaseChange, accessibilitySettings }) => {
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
 
-  // Initialize audio on component mount
   useEffect(() => {
     if (!accessibilitySettings?.muteAudio) {
       audioManager.init();
@@ -861,8 +962,6 @@ const GameContainer = ({ onGameEnd, onPhaseChange, accessibilitySettings }) => {
 
   const handlePhaseChange = useCallback((phase) => {
     setCurrentPhase(phase);
-    setShowPhaseTransition(true);
-    setTimeout(() => setShowPhaseTransition(false), 1500);
     if (onPhaseChange) onPhaseChange(phase);
   }, [onPhaseChange]);
 
@@ -874,7 +973,7 @@ const GameContainer = ({ onGameEnd, onPhaseChange, accessibilitySettings }) => {
     if (!containerRef.current || gameRef.current) return;
 
     const width = Math.min(window.innerWidth, 400);
-    const height = Math.min(window.innerHeight - 40, 680);
+    const height = Math.min(window.innerHeight - 40, 700);
 
     const config = {
       type: Phaser.AUTO,
@@ -884,10 +983,8 @@ const GameContainer = ({ onGameEnd, onPhaseChange, accessibilitySettings }) => {
       backgroundColor: '#0a0a12',
       scene: GreenshoeGameScene,
       input: {
-        activePointers: 3, // Support multi-touch
-        touch: {
-          capture: true // Capture touch events
-        }
+        activePointers: 3,
+        touch: { capture: true }
       },
       scale: {
         mode: Phaser.Scale.FIT,
@@ -916,36 +1013,15 @@ const GameContainer = ({ onGameEnd, onPhaseChange, accessibilitySettings }) => {
     };
   }, [handlePhaseChange, handleGameEnd, accessibilitySettings?.muteAudio]);
 
-  const phaseNames = ['Bookbuilding Rush', 'First Print', 'Aftermarket Wave'];
-  const phaseDescs = [
-    'Orders flowing in',
-    'Trading begins — stabilize!',
-    'News events — react quickly!'
-  ];
-
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-[#0a0a12]">
-      {/* Phase transition overlay */}
-      {showPhaseTransition && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 animate-fade-in">
-          <div className="text-center">
-            <div className="text-cyan-400 text-sm font-mono mb-2">PHASE {currentPhase + 1}</div>
-            <div className="text-white text-2xl font-bold tracking-wider mb-2">
-              {phaseNames[currentPhase]}
-            </div>
-            <div className="text-white/50 text-sm">{phaseDescs[currentPhase]}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Game canvas - improved touch handling */}
       <div 
         id="game-container" 
         ref={containerRef}
         className="w-full max-w-[400px] rounded-xl overflow-hidden shadow-2xl select-none"
         style={{ 
           boxShadow: '0 0 60px rgba(0, 255, 170, 0.15), 0 0 30px rgba(0, 170, 255, 0.1)',
-          touchAction: 'none',
+          touchAction: 'manipulation',
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
           userSelect: 'none'
