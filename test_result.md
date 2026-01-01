@@ -94,12 +94,13 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Remove Made with Emergent Badge"
     - "Clickable Elements on Results Screen"
     - "Game completion transition issue"
   stuck_tasks:
     - "Clickable Elements on Results Screen"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "critical_first"
 
 agent_communication:
   - agent: "testing"
