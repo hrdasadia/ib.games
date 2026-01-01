@@ -75,6 +75,18 @@ frontend:
         agent: "testing"
         comment: "VERIFIED: Text overflow fix confirmed. Feedback text properly configured with wordWrap settings (width-60 for title, width-80 for description) and appropriate font sizes (24px for feedbackTitle, 12px for feedbackDesc) as seen in lines 348-360. Text is centered with setOrigin(0.5) and includes useAdvancedWrap for proper text wrapping. Game UI testing shows no text overflow issues."
 
+  - task: "Remove Made with Emergent Badge"
+    implemented: false
+    working: false
+    file: "frontend/public/index.html"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL FAILURE: 'Made with Emergent' badge is still fully visible in bottom right corner. Badge element (ID: emergent-badge) exists with fixed positioning (bottom: 20px, right: 20px), visible display, and full opacity. Root cause: emergent-main.js script from https://assets.emergent.sh/scripts/emergent-main.js is injecting the badge. This is NOT the debug-monitor.js script from iframe condition - it's a separate external script that needs to be blocked. Badge contains 'Made with Emergent' text and links to https://app.emergent.sh/?utm_source=emergent-badge. Task has NOT been completed."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"
