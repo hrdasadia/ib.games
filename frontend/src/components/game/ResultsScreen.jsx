@@ -7,11 +7,10 @@ import {
   CheckCircle, AlertTriangle, XCircle, Info
 } from 'lucide-react';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui/popover"
 import { Button } from '../ui/button';
 import { useNavigate } from 'react-router-dom';
 import { LEARNING_BULLETS, LINKEDIN_CAPTION_TEMPLATE } from '../../data/mockData';
@@ -52,7 +51,17 @@ const ScoreCard = ({ result }) => {
           <h2 className="text-white text-lg font-bold">Greenshoe Sprint</h2>
         </div>
         <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${rankInfo.color} flex items-center justify-center shadow-lg`}>
-          <span className="text-white font-bold text-lg">{rankInfo.abbrev}</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full h-full flex items-center justify-center focus:outline-none">
+                <span className="text-white font-bold text-lg">{rankInfo.abbrev}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="bg-slate-900 border-slate-700 text-white w-60">
+              <div className="font-bold mb-1">{result.rank}</div>
+              <p className="text-sm text-slate-300">{rankInfo.description}</p>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -98,23 +107,27 @@ const ScoreCard = ({ result }) => {
       {/* Badges */}
       {result.badges && result.badges.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10">
-          <TooltipProvider>
-            {result.badges.map(badge => (
-              <Tooltip key={badge.id}>
-                <TooltipTrigger asChild>
-                  <div 
-                    className="cursor-help px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400 flex items-center gap-1.5 hover:bg-amber-500/20 transition-colors"
-                  >
-                    <Star className="w-3 h-3" />
-                    {badge.name}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="bg-slate-900 border border-slate-700 text-white max-w-[200px]">
-                  <p>{BADGE_DESCRIPTIONS[badge.name] || 'Awarded for exceptional gameplay.'}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </TooltipProvider>
+          {result.badges.map(badge => (
+            <Popover key={badge.id}>
+              <PopoverTrigger asChild>
+                <button 
+                  className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400 flex items-center gap-1.5 hover:bg-amber-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                >
+                  <Star className="w-3 h-3" />
+                  {badge.name}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="bg-slate-900 border-slate-700 text-white w-60">
+                <div className="font-bold text-amber-400 mb-1 flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  {badge.name}
+                </div>
+                <p className="text-sm text-slate-300">
+                  {BADGE_DESCRIPTIONS[badge.name] || 'Awarded for exceptional gameplay.'}
+                </p>
+              </PopoverContent>
+            </Popover>
+          ))}
         </div>
       )}
     </div>
