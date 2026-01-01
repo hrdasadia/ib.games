@@ -156,9 +156,9 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
           <div className="flex flex-col items-center gap-4">
             <div className="text-5xl">👟</div>
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 max-w-xs">
-              <div className="text-emerald-400 font-bold text-sm mb-1">Greenshoe Option</div>
+              <div className="text-emerald-400 font-bold text-sm mb-1">Strategic Tool</div>
               <div className="text-white/60 text-xs leading-relaxed">
-                Allows underwriters to sell up to ~15% extra shares if demand is high. Creates a "buffer" to stabilize wild price swings.
+                Use this to create a supply "buffer" and cool down overheating prices.
               </div>
             </div>
             <div className="flex gap-2">
