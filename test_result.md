@@ -12,6 +12,18 @@ frontend:
         agent: "testing"
         comment: "PASS: Interactive badges implemented with TooltipProvider and Tooltip components. Badges show detailed descriptions on hover (lines 99-119). Badge descriptions include 'Sharp Instincts', 'Price Master', 'Budget Hawk', and 'Reserved Power' with detailed explanations (lines 256-261)."
 
+  - task: "Clickable Elements on Results Screen"
+    implemented: true
+    working: false
+    file: "frontend/src/components/game/ResultsScreen.jsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "PARTIAL: Code analysis confirms proper implementation of clickable rank icons (lines 54-64) and badges (lines 111-129) using Radix UI Popover components. Both elements are configured as buttons with click/tap events (not hover). Mobile-friendly interactions confirmed. ISSUE: Unable to test functionality due to game not completing - game progresses through rounds correctly but doesn't transition to results screen after 12 rounds. Game completion logic may have timing issue in GameContainer.jsx around lines 500-502."
+
   - task: "Greenshoes Label Update"
     implemented: true
     working: true
