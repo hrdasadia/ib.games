@@ -98,7 +98,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
                 strokeWidth="3"
               />
               <line x1="0" y1="30" x2="200" y2="30" stroke="rgba(0,255,170,0.3)" strokeDasharray="5 5" />
-              <text x="100" y="58" textAnchor="middle" fill="#666" fontSize="10">Wild price swings = Bad</text>
+              <text x="100" y="55" textAnchor="middle" fill="#ccc" fontSize="10">Wild price swings = Bad</text>
             </svg>
           </div>
         );
@@ -107,16 +107,16 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
         return (
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl">12</div>
-              <span className="text-white/70">Rounds</span>
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl text-white">12</div>
+              <span className="text-white/90">Rounds</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl">5s</div>
-              <span className="text-white/70">Per Decision</span>
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl text-white">5s</div>
+              <span className="text-white/90">Per Decision</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl">3</div>
-              <span className="text-white/70">Choices Each Round</span>
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl text-white">3</div>
+              <span className="text-white/90">Choices Each Round</span>
             </div>
           </div>
         );
@@ -132,7 +132,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
                 <span className="text-xs text-blue-400 mt-1">ADD DEMAND</span>
               </div>
             </div>
-            <div className="text-sm text-white/50">Buy shares to push price UP</div>
+            <div className="text-sm text-white/80">Buy shares to push price UP</div>
           </div>
         );
       
@@ -147,7 +147,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
                 <span className="text-xs text-emerald-400 mt-1">ADD SUPPLY</span>
               </div>
             </div>
-            <div className="text-sm text-white/50">Release shares to push price DOWN</div>
+            <div className="text-sm text-white/80">Release shares to push price DOWN</div>
           </div>
         );
       
@@ -183,7 +183,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
                 <span className="text-xs text-gray-400 mt-1">DO NOTHING</span>
               </div>
             </div>
-            <div className="text-sm text-white/50">Save resources for when you need them!</div>
+            <div className="text-sm text-white/80">Save resources for when you need them!</div>
           </div>
         );
       
@@ -193,14 +193,14 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
                 <div className="text-emerald-400 font-bold">✓ Correct</div>
-                <div className="text-white/50 text-xs mt-1">Price stabilizes</div>
+                <div className="text-white/80 text-xs mt-1">Price stabilizes</div>
               </div>
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center">
                 <div className="text-red-400 font-bold">✗ Wrong</div>
-                <div className="text-white/50 text-xs mt-1">Price gets worse</div>
+                <div className="text-white/80 text-xs mt-1">Price gets worse</div>
               </div>
             </div>
-            <div className="text-white/40 text-xs mt-2">
+            <div className="text-white/80 text-xs mt-2">
               Goal: Keep price close to $100 with high accuracy
             </div>
           </div>
@@ -234,7 +234,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 pt-12">
         {/* Step indicator */}
-        <div className="text-cyan-400/50 text-xs font-mono mb-6">
+        <div className="text-white/80 text-xs font-mono mb-6">
           {currentStep + 1} / {steps.length}
         </div>
 
