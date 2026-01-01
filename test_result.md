@@ -103,7 +103,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Remove Made with Emergent Badge"
     - "Clickable Elements on Results Screen"
     - "Game completion transition issue"
   stuck_tasks:
