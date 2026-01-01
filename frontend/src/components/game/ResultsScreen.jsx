@@ -59,7 +59,7 @@ const ScoreCard = ({ result }) => {
       {/* Total Score */}
       <div className="text-center mb-5 py-4 bg-white/5 rounded-xl">
         <div className="text-4xl font-bold text-white mb-1">{result.totalScore}</div>
-        <div className="text-white/40 text-sm">out of 1000 points</div>
+        <div className="text-white/60 text-sm">out of 1000 points</div>
         <div className={`inline-block mt-2 px-4 py-1 rounded-full bg-gradient-to-r ${rankInfo.color} text-white text-sm font-semibold`}>
           {result.rank}
         </div>
@@ -72,12 +72,12 @@ const ScoreCard = ({ result }) => {
           return (
             <div key={score.name}>
               <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="flex items-center gap-2 text-white/70">
+                <span className="flex items-center gap-2 text-white/90">
                   <score.icon className="w-4 h-4" />
                   {score.name}
                 </span>
                 <span className="text-white font-mono font-medium">
-                  {score.value}<span className="text-white/40">/{score.max}</span>
+                  {score.value}<span className="text-white/60">/{score.max}</span>
                 </span>
               </div>
               <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
@@ -216,15 +216,15 @@ const MetricAnalysis = ({ result }) => {
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="bg-white/5 rounded-lg p-3 text-center">
           <div className="text-xl font-bold text-cyan-400">{result.correctDecisions || 0}/{result.totalDecisions || 0}</div>
-          <div className="text-xs text-white/40">Correct</div>
+          <div className="text-xs text-white/60">Correct</div>
         </div>
         <div className="bg-white/5 rounded-lg p-3 text-center">
           <div className="text-xl font-bold text-emerald-400">${result.finalPrice?.toFixed(0) || '100'}</div>
-          <div className="text-xs text-white/40">Final Price</div>
+          <div className="text-xs text-white/60">Final Price</div>
         </div>
         <div className="bg-white/5 rounded-lg p-3 text-center">
           <div className="text-xl font-bold text-amber-400">{3 - (result.greenshoesUsed || 0)}</div>
-          <div className="text-xs text-white/40">Greenshoes</div>
+          <div className="text-xs text-white/60">Greenshoes</div>
         </div>
       </div>
 
@@ -236,9 +236,9 @@ const MetricAnalysis = ({ result }) => {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-semibold text-white">{item.metric}</span>
-                <span className="text-sm text-white/50">{item.score}/{item.max}</span>
+                <span className="text-sm text-white/70">{item.score}/{item.max}</span>
               </div>
-              <p className="text-sm text-white/70 mb-2">{item.analysis}</p>
+              <p className="text-sm text-white/90 mb-2">{item.analysis}</p>
               {item.tip && (
                 <div className="flex items-start gap-2 mt-2 pt-2 border-t border-white/10">
                   <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />

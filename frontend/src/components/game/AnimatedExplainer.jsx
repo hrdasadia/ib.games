@@ -157,18 +157,18 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
             <div className="text-5xl">👟</div>
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 max-w-xs">
               <div className="text-emerald-400 font-bold text-sm mb-1">Strategic Tool</div>
-              <div className="text-white/60 text-xs leading-relaxed">
+              <div className="text-white/90 text-xs leading-relaxed">
                 Use this to create a supply "buffer" and cool down overheating prices.
               </div>
             </div>
             <div className="flex gap-2">
               {[1,2,3].map(i => (
-                <div key={i} className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold">
+                <div key={i} className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-500/20">
                   {i}
                 </div>
               ))}
             </div>
-            <div className="text-xs text-white/40">You have 3 greenshoe uses</div>
+            <div className="text-sm font-bold text-emerald-400">You have 3 greenshoe uses</div>
           </div>
         );
       
@@ -249,7 +249,7 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
         </h2>
 
         {/* Description */}
-        <p className="text-white/70 text-center text-base leading-relaxed max-w-sm mb-6">
+        <p className="text-white/90 text-center text-base leading-relaxed max-w-sm mb-6">
           {step.description}
         </p>
 

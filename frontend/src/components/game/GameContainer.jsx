@@ -88,7 +88,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     });
     
     this.phaseDescText = this.add.text(20, 40, 'Phase 1: Bookbuilding', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#666'
+      fontFamily: 'monospace', fontSize: '11px', color: '#999'
     });
     
     // Progress bar for rounds
@@ -111,7 +111,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.priceContainer.add(this.priceText);
     
     this.targetText = this.add.text(0, 25, 'Target: $100', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#666'
+      fontFamily: 'monospace', fontSize: '12px', color: '#999'
     }).setOrigin(0.5);
     this.priceContainer.add(this.targetText);
     
@@ -156,7 +156,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.scenarioContainer.add(this.scenarioTitle);
     
     this.scenarioDesc = this.add.text(0, 28, 'Waiting for market activity...', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#aaa', wordWrap: { width: width - 80 }
+      fontFamily: 'monospace', fontSize: '11px', color: '#ddd', wordWrap: { width: width - 80 }
     }).setOrigin(0.5);
     this.scenarioContainer.add(this.scenarioDesc);
     
@@ -238,12 +238,12 @@ class GreenshoeGameScene extends Phaser.Scene {
       
       // Sublabel
       const sublabel = this.add.text(x, buttonY + 36, btn.sublabel, {
-        fontFamily: 'monospace', fontSize: '9px', color: '#aaa'
+        fontFamily: 'monospace', fontSize: '9px', color: '#ccc'
       }).setOrigin(0.5);
       
       // Hint text (cleaner)
       const hint = this.add.text(x, buttonY + 52, btn.hint, {
-        fontFamily: 'monospace', fontSize: '8px', color: '#666', align: 'center'
+        fontFamily: 'monospace', fontSize: '8px', color: '#999', align: 'center'
       }).setOrigin(0.5);
       
       // Button interactions - more pronounced feedback
@@ -302,7 +302,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     
     // Stabilization budget
     this.add.text(20, y, 'STABILIZATION BUDGET', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#666'
+      fontFamily: 'monospace', fontSize: '9px', color: '#999'
     });
     this.budgetBarBg = this.add.rectangle(20, y + 18, 120, 10, 0x1a2a3a).setOrigin(0, 0.5);
     this.budgetBarFill = this.add.rectangle(20, y + 18, 120, 10, 0x0088ff).setOrigin(0, 0.5);
@@ -312,7 +312,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     
     // Greenshoe count
     this.add.text(width - 20, y, 'GREENSHOES', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#666'
+      fontFamily: 'monospace', fontSize: '9px', color: '#999'
     }).setOrigin(1, 0);
     
     this.greenshoeIcons = [];
@@ -323,7 +323,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     
     // Score display
     this.add.text(20, y + 40, 'CORRECT DECISIONS', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#666'
+      fontFamily: 'monospace', fontSize: '9px', color: '#999'
     });
     this.scoreText = this.add.text(20, y + 55, '0 / 0', {
       fontFamily: 'monospace', fontSize: '16px', fontStyle: 'bold', color: '#00ffaa'
@@ -353,7 +353,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     this.feedbackContainer.add(this.feedbackTitle);
     
     this.feedbackDesc = this.add.text(0, 50, 'Price stabilized', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#aaa',
+      fontFamily: 'monospace', fontSize: '12px', color: '#ddd',
       wordWrap: { width: width - 80, useAdvancedWrap: true },
       align: 'center', lineSpacing: 4
     }).setOrigin(0.5);
