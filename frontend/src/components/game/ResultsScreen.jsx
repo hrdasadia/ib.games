@@ -236,7 +236,7 @@ const MetricAnalysis = ({ result }) => {
           <div className="text-xs text-white/60">Final Price</div>
         </div>
         <div className="bg-white/5 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-amber-400">{3 - (result.greenshoesUsed || 0)}</div>
+          <div className="text-xl font-bold text-amber-400">{5 - (result.greenshoesUsed || 0)}</div>
           <div className="text-xs text-white/60">Greenshoes</div>
         </div>
       </div>

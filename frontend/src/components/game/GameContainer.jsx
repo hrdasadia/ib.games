@@ -28,7 +28,7 @@ class GreenshoeGameScene extends Phaser.Scene {
       price: 100,
       targetPrice: 100,
       stabilizationBudget: 100,
-      greenshoesRemaining: 3,
+      greenshoesRemaining: 5,
       priceHistory: [{ time: 0, price: 100 }],
       gameOver: false,
       inDecisionMode: false,
@@ -316,7 +316,7 @@ class GreenshoeGameScene extends Phaser.Scene {
     }).setOrigin(1, 0);
     
     this.greenshoeIcons = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const icon = this.add.circle(width - 25 - i * 28, y + 18, 10, 0x00aa55);
       this.greenshoeIcons.push(icon);
     }
@@ -977,10 +977,10 @@ class GreenshoeGameScene extends Phaser.Scene {
   }
 
   updateGreenshoeDisplay() {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const hasThis = i < this.gameState.greenshoesRemaining;
-      this.greenshoeIcons[2-i].setFillStyle(hasThis ? 0x00aa55 : 0x333333);
-      this.greenshoeIcons[2-i].setAlpha(hasThis ? 1 : 0.4);
+      this.greenshoeIcons[4-i].setFillStyle(hasThis ? 0x00aa55 : 0x333333);
+      this.greenshoeIcons[4-i].setAlpha(hasThis ? 1 : 0.4);
     }
   }
 
@@ -1122,7 +1122,7 @@ class GreenshoeGameScene extends Phaser.Scene {
       priceHistory: this.gameState.priceHistory,
       finalPrice: this.gameState.price,
       budgetRemaining: this.gameState.stabilizationBudget,
-      greenshoesUsed: 3 - this.gameState.greenshoesRemaining,
+      greenshoesUsed: 5 - this.gameState.greenshoesRemaining,
       correctDecisions: this.gameState.correctDecisions,
       totalDecisions: this.gameState.totalDecisions,
       maxVolatility: 0.1

@@ -162,13 +162,13 @@ const AnimatedExplainer = ({ onComplete, onSkip }) => {
               </div>
             </div>
             <div className="flex gap-2">
-              {[1,2,3].map(i => (
+              {[1,2,3,4,5].map(i => (
                 <div key={i} className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-emerald-500/20">
                   {i}
                 </div>
               ))}
             </div>
-            <div className="text-sm font-bold text-emerald-400">You have 3 greenshoe uses</div>
+            <div className="text-sm font-bold text-emerald-400">You have 5 greenshoe uses</div>
           </div>
         );
       
